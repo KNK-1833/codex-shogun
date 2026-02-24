@@ -14,10 +14,11 @@
 # tmux paneの末尾5行からCLI固有のidle/busyパターンを検出する。
 # Returns: 0=busy, 1=idle, 2=pane不在
 #
-# Detection strategy (Codex-primary):
-#   1. Idle checks: Codex '? for shortcuts' / 'context left' prompts
-#   2. Text-based busy markers: spinner keywords in bottom 5 lines
-#   3. Fallback: default to idle
+# Detection strategy (Codex-primary, Claude-compatible):
+#   1. Status bar check: 'esc to' on last line = Claude active processing
+#   2. Idle checks: Codex '? for shortcuts' / 'context left', Claude ❯/› prompt
+#   3. Text-based busy markers: spinner keywords in bottom 5 lines
+#   4. Fallback: default to idle
 agent_is_busy_check() {
     local pane_target="$1"
     local pane_tail
@@ -30,9 +31,22 @@ agent_is_busy_check() {
         return 2
     fi
 
+    # ── Status bar check (last non-empty line) ──
+    # Claude Code status bar appends 'esc to interrupt' ONLY during active processing.
+    # Check only the last line to avoid false-busy from old spinner text in scroll-back.
+    local last_line
+    last_line=$(echo "$pane_tail" | grep -v '^[[:space:]]*$' | tail -1)
+    if echo "$last_line" | grep -qiF 'esc to'; then
+        return 0  # busy — status bar confirms active processing
+    fi
+
     # ── Idle checks ──
     # Codex idle prompt (primary)
     if echo "$pane_tail" | grep -qE '(\? for shortcuts|context left)'; then
+        return 1
+    fi
+    # Claude Code bare prompt
+    if echo "$pane_tail" | grep -qE '^(❯|›)\s*$'; then
         return 1
     fi
 
