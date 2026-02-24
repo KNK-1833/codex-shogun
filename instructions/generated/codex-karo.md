@@ -803,11 +803,6 @@ For `codex exec` mode:
 Codex configures MCP servers in `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.memory]
-type = "stdio"
-command = "npx"
-args = ["-y", "@anthropic/memory-mcp"]
-
 [mcp_servers.github]
 type = "stdio"
 command = "npx"

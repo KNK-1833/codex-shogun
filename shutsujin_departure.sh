@@ -683,10 +683,10 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
     # 少し待機（安定のため）
     sleep 1
 
-    # 家老（pane 0）: CLI Adapter経由でコマンド構築（デフォルト: Sonnet）
+    # 家老（pane 0）: CLI Adapter経由でコマンド構築（デフォルト: Codex）
     p=$((PANE_BASE + 0))
-    _karo_cli_type="claude"
-    _karo_cmd="claude --model sonnet --dangerously-skip-permissions"
+    _karo_cli_type="codex"
+    _karo_cmd="codex --model o3 --dangerously-bypass-approvals-and-sandbox"
     if [ "$CLI_ADAPTER_LOADED" = true ]; then
         _karo_cli_type=$(get_cli_type "karo")
         _karo_cmd=$(build_cli_command "karo")
@@ -704,18 +704,14 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
     log_info "  └─ 家老（${_karo_display}）、召喚完了"
 
     if [ "$KESSEN_MODE" = true ]; then
-        # 決戦の陣: CLI Adapter経由（claudeはOpus強制）
+        # 決戦の陣: CLI Adapter経由（Codex-primary、Opus相当）
         for i in $(seq 1 "$_ASHIGARU_COUNT"); do
             p=$((PANE_BASE + i))
-            _ashi_cli_type="claude"
-            _ashi_cmd="claude --model opus --dangerously-skip-permissions"
+            _ashi_cli_type="codex"
+            _ashi_cmd="codex --model o3 --dangerously-bypass-approvals-and-sandbox"
             if [ "$CLI_ADAPTER_LOADED" = true ]; then
                 _ashi_cli_type=$(get_cli_type "ashigaru${i}")
-                if [ "$_ashi_cli_type" = "claude" ]; then
-                    _ashi_cmd="claude --model opus --dangerously-skip-permissions"
-                else
-                    _ashi_cmd=$(build_cli_command "ashigaru${i}")
-                fi
+                _ashi_cmd=$(build_cli_command "ashigaru${i}")
             fi
             # Codex等の初期プロンプト付加（サジェストUI停止問題対策）
             _startup_prompt=$(get_startup_prompt "ashigaru${i}" 2>/dev/null)
@@ -728,11 +724,11 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
         done
         log_info "  └─ 足軽1-${_ASHIGARU_COUNT}（決戦の陣）、召喚完了"
     else
-        # 平時の陣: CLI Adapter経由（デフォルト: 全足軽=Sonnet）
+        # 平時の陣: CLI Adapter経由（デフォルト: 全足軽=Codex）
         for i in $(seq 1 "$_ASHIGARU_COUNT"); do
             p=$((PANE_BASE + i))
-            _ashi_cli_type="claude"
-            _ashi_cmd="claude --model sonnet --dangerously-skip-permissions"
+            _ashi_cli_type="codex"
+            _ashi_cmd="codex --model o3 --dangerously-bypass-approvals-and-sandbox"
             if [ "$CLI_ADAPTER_LOADED" = true ]; then
                 _ashi_cli_type=$(get_cli_type "ashigaru${i}")
                 _ashi_cmd=$(build_cli_command "ashigaru${i}")
@@ -751,8 +747,8 @@ with open(f,'w') as fh: yaml.safe_dump(d, fh, default_flow_style=False, allow_un
 
     # 軍師（pane _ASHIGARU_COUNT+1）: Opus Thinking — 戦略立案・設計判断専任
     p=$((PANE_BASE + _ASHIGARU_COUNT + 1))
-    _gunshi_cli_type="claude"
-    _gunshi_cmd="claude --model opus --dangerously-skip-permissions"
+    _gunshi_cli_type="codex"
+    _gunshi_cmd="codex --model o3 --dangerously-bypass-approvals-and-sandbox"
     if [ "$CLI_ADAPTER_LOADED" = true ]; then
         _gunshi_cli_type=$(get_cli_type "gunshi")
         _gunshi_cmd=$(build_cli_command "gunshi")
@@ -1031,12 +1027,14 @@ if [ "$SETUP_ONLY" = true ]; then
     echo "  ┌──────────────────────────────────────────────────────────┐"
     echo "  │  # 将軍を召喚                                            │"
     echo "  │  tmux send-keys -t shogun:main \\                         │"
-    echo "  │    'claude --dangerously-skip-permissions' Enter         │"
+    echo "  │    'codex --dangerously-bypass-approvals-and-sandbox' \\ │"
+    echo "  │    Enter                                                 │"
     echo "  │                                                          │"
     echo "  │  # 家老・足軽を一斉召喚                                  │"
-    echo "  │  for p in \$(seq $PANE_BASE $((PANE_BASE+8))); do                                 │"
+    echo "  │  for p in \$(seq $PANE_BASE $((PANE_BASE+8))); do        │"
     echo "  │      tmux send-keys -t multiagent:agents.\$p \\            │"
-    echo "  │      'claude --dangerously-skip-permissions' Enter       │"
+    echo "  │      'codex --dangerously-bypass-approvals-and-sandbox' \\│"
+    echo "  │      Enter                                               │"
     echo "  │  done                                                    │"
     echo "  └──────────────────────────────────────────────────────────┘"
     echo ""
