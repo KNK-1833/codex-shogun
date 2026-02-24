@@ -350,7 +350,7 @@ teardown() {
 Use conventional commit prefixes:
 
 ```
-feat: add new CLI adapter for Kimi Code
+feat: add Codex CLI startup prompt support
 fix: resolve inbox_watcher rc=1 on atomic writes
 docs: update CONTRIBUTING.md with .gitignore rules
 test: add unit tests for cli_adapter.sh

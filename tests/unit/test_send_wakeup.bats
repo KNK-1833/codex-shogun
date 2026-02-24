@@ -17,9 +17,9 @@
 #   T-SW-011: inbox_watcher.sh uses send-keys, functions exist
 #   T-ESC-001: escalation — no unread → FIRST_UNREAD_SEEN stays 0
 #   T-ESC-002: escalation — unread < 2min → standard nudge
-#   T-ESC-003: escalation — unread 2-4min → Escape+nudge
+#   T-ESC-003: escalation — unread 2-4min → Escape suppressed for codex/claude, plain nudge sent
 #   T-ESC-004: escalation — unread > 4min → /clear sent
-#   T-ESC-005: escalation — /clear cooldown → falls back to Escape+nudge
+#   T-ESC-005: escalation — /clear cooldown → Escape suppressed for codex/claude, plain nudge sent
 #   T-BUSY-001: agent_is_busy — detects "Working" in pane
 #   T-BUSY-002: agent_is_busy — idle pane returns 1
 #   T-BUSY-003: send_wakeup — skips when agent is busy
@@ -29,7 +29,7 @@
 #   T-CODEX-003: C-u sent when unread=0 and agent is idle
 #   T-CODEX-004: C-u NOT sent when agent is busy
 #   T-CODEX-005: send_cli_command — claude /clear passes through as-is
-#   T-CODEX-006: inbox_watcher.sh has agent_is_busy and Codex/Copilot handlers
+#   T-CODEX-006: inbox_watcher.sh has agent_is_busy and Codex handlers
 #   T-CODEX-007: pane @agent_cli=codex overrides stale CLI_TYPE (Phase2 C-c抑止)
 #   T-CODEX-008: pane @agent_cli=codex overrides stale CLI_TYPE (/clear→/new)
 #   T-CODEX-009: normalize_special_command rejects invalid model_switch payload
@@ -49,12 +49,10 @@
 #   T-BUSY-011: agent_is_busy — 'esc to interrupt' alone detected as busy
 #   T-SHOOK-001: Claude Code throttle uses 300s cooldown (stop-hook-primary)
 #   T-SHOOK-002: Claude Code throttle ignores count changes (stop-hook-primary)
-#   T-SHOOK-003: Non-Claude CLIs still bypass throttle on count change
+#   T-SHOOK-003: Non-Claude CLIs (codex) bypass throttle on count change
 #   T-CRESET-001: send_context_reset — suppresses /clear for karo
 #   T-CRESET-002: send_context_reset — suppresses /clear for gunshi
 #   T-CRESET-003: send_context_reset — sends /clear for ashigaru
-#   T-COPILOT-001: send_cli_command — copilot /clear → Ctrl-C + restart
-#   T-COPILOT-002: send_cli_command — copilot /model → skip
 
 # --- セットアップ ---
 
@@ -327,27 +325,27 @@ MOCK
     ! grep -q "send-keys.*Escape" "$MOCK_LOG"
 }
 
-# --- T-ESC-003: unread 2-4min → Escape+nudge ---
+# --- T-ESC-003: unread 2-4min → Escape suppressed for codex/claude, plain nudge sent ---
 
-@test "T-ESC-003: escalation Phase 2 — unread 2-4min uses Escape+nudge (copilot)" {
-    # Escape escalation is suppressed for claude/codex (Stop hook / safety).
-    # Test with copilot CLI which still uses Escape escalation.
-    export MOCK_PANE_CLI="copilot"
+@test "T-ESC-003: escalation Phase 2 — Escape suppressed for codex/claude, plain nudge sent" {
+    # Both codex and claude suppress Escape escalation (Stop hook / safety).
+    # send_wakeup_with_escape should fall through to plain send_wakeup.
     run bash -c '
         source "'"$TEST_HARNESS"'"
+        CLI_TYPE="codex"
         now=$(date +%s)
         FIRST_UNREAD_SEEN=$((now - 180))  # 3 minutes ago
         age=$((now - FIRST_UNREAD_SEEN))
         if [ "$age" -ge "$ESCALATE_PHASE1" ] && [ "$age" -lt "$ESCALATE_PHASE2" ]; then
             send_wakeup_with_escape 3
-            echo "PHASE2_ESCAPE_NUDGE"
+            echo "PHASE2_SUPPRESSED"
         fi
     '
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q "PHASE2_ESCAPE_NUDGE"
-    # Escape was sent
-    grep -q "send-keys.*Escape" "$MOCK_LOG"
-    # Nudge was also sent
+    echo "$output" | grep -q "PHASE2_SUPPRESSED"
+    # Escape was NOT sent (suppressed for codex/claude)
+    ! grep -q "send-keys.*Escape" "$MOCK_LOG"
+    # Plain nudge WAS sent via send_wakeup fallthrough
     grep -q "send-keys.*inbox3" "$MOCK_LOG"
 }
 
@@ -370,13 +368,14 @@ MOCK
     grep -q "send-keys.*/clear" "$MOCK_LOG"
 }
 
-# --- T-ESC-005: /clear cooldown → falls back to Escape+nudge ---
+# --- T-ESC-005: /clear cooldown → Escape suppressed for codex/claude, plain nudge sent ---
 
-@test "T-ESC-005: escalation /clear cooldown — falls back to Escape+nudge (copilot)" {
-    # Escape escalation is suppressed for claude/codex. Test with copilot.
-    export MOCK_PANE_CLI="copilot"
+@test "T-ESC-005: escalation /clear cooldown — Escape suppressed for codex/claude, plain nudge sent" {
+    # Both codex and claude suppress Escape escalation even in cooldown fallback.
+    # send_wakeup_with_escape should fall through to plain send_wakeup.
     run bash -c '
         source "'"$TEST_HARNESS"'"
+        CLI_TYPE="claude"
         now=$(date +%s)
         FIRST_UNREAD_SEEN=$((now - 300))  # 5 minutes ago
         LAST_CLEAR_TS=$((now - 60))  # /clear sent 1 min ago (within 5min cooldown)
@@ -388,7 +387,9 @@ MOCK
     '
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "COOLDOWN_FALLBACK"
-    grep -q "send-keys.*Escape" "$MOCK_LOG"
+    # Escape was NOT sent (suppressed for codex/claude)
+    ! grep -q "send-keys.*Escape" "$MOCK_LOG"
+    # Plain nudge WAS sent via send_wakeup fallthrough
     grep -q "send-keys.*inbox4" "$MOCK_LOG"
     ! grep -q "send-keys.*/clear" "$MOCK_LOG"
 }
@@ -543,9 +544,9 @@ MOCK
     ! grep -q "/new" "$MOCK_LOG"
 }
 
-# --- T-CODEX-006: inbox_watcher.sh has agent_is_busy and Codex/Copilot handlers ---
+# --- T-CODEX-006: inbox_watcher.sh has agent_is_busy and Codex handlers ---
 
-@test "T-CODEX-006: inbox_watcher.sh contains agent_is_busy and Codex/Copilot handlers" {
+@test "T-CODEX-006: inbox_watcher.sh contains agent_is_busy and Codex handlers" {
     grep -q "agent_is_busy()" "$WATCHER_SCRIPT"
     # Busy detection patterns live in lib/agent_status.sh (shared library)
     grep -q 'Working|Thinking|Planning|Sending' "$PROJECT_ROOT/lib/agent_status.sh"
@@ -558,10 +559,6 @@ MOCK
 
     # C-u cleanup exists
     grep -q 'C-u' "$WATCHER_SCRIPT"
-
-    # Copilot handler exists
-    grep -q 'copilot --yolo' "$WATCHER_SCRIPT"
-    grep -q 'not supported on copilot' "$WATCHER_SCRIPT"
 }
 
 # --- T-CODEX-007: pane cli overrides stale CLI_TYPE in Phase2 ---
@@ -772,38 +769,6 @@ YAML
     '
     [ "$status" -eq 0 ]
     echo "$output" | grep -q "OK"
-}
-
-# --- T-COPILOT-001: copilot /clear → Ctrl-C + restart ---
-
-@test "T-COPILOT-001: send_cli_command sends Ctrl-C + copilot restart for copilot /clear" {
-    run bash -c '
-        source "'"$TEST_HARNESS"'"
-        CLI_TYPE="copilot"
-        send_cli_command "/clear"
-    '
-    [ "$status" -eq 0 ]
-
-    # Should trigger copilot restart
-    grep -q "send-keys.*C-c" "$MOCK_LOG"
-    grep -q "send-keys.*copilot --yolo" "$MOCK_LOG"
-    # NOT /clear or /new
-    ! grep -q "send-keys.*/clear" "$MOCK_LOG"
-    ! grep -q "send-keys.*/new" "$MOCK_LOG"
-}
-
-# --- T-COPILOT-002: copilot /model → skip ---
-
-@test "T-COPILOT-002: send_cli_command skips /model for copilot" {
-    run bash -c '
-        source "'"$TEST_HARNESS"'"
-        CLI_TYPE="copilot"
-        send_cli_command "/model opus"
-    '
-    [ "$status" -eq 0 ]
-
-    ! grep -q "send-keys.*/model" "$MOCK_LOG"
-    echo "$output" | grep -q "not supported on copilot"
 }
 
 # --- T-SHOGUN-001: session_has_client — client attached ---
@@ -1026,12 +991,12 @@ YAML
     echo "$output" | grep -q "stop-hook-primary"
 }
 
-# --- T-SHOOK-003: Non-Claude CLIs bypass throttle on count change ---
+# --- T-SHOOK-003: Non-Claude CLIs (codex) bypass throttle on count change ---
 
-@test "T-SHOOK-003: Non-Claude CLIs still bypass throttle on count change" {
+@test "T-SHOOK-003: Non-Claude CLIs (codex) bypass throttle on count change" {
     run bash -c '
         source "'"$TEST_HARNESS"'"
-        CLI_TYPE="copilot"
+        CLI_TYPE="codex"
         LAST_NUDGE_TS=0
         LAST_NUDGE_COUNT=""
 
@@ -1042,7 +1007,7 @@ YAML
         # Simulate 30s elapsed, count changed from 1 to 2
         LAST_NUDGE_TS=$(($(date +%s) - 30))
 
-        # For copilot, count change (1→2) SHOULD bypass throttle
+        # For codex, count change (1→2) SHOULD bypass throttle
         should_throttle_nudge 2
         rc2=$?
 

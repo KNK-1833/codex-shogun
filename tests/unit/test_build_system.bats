@@ -1,18 +1,12 @@
 #!/usr/bin/env bats
 # test_build_system.bats — ビルドシステム（build_instructions.sh）ユニットテスト
-# Phase 2+3 品質テスト基盤
 #
 # テスト構成:
 #   - ビルド実行テスト: スクリプト正常終了、ディレクトリ生成
-#   - ファイル生成テスト: claude/codex/copilot各ロールの生成確認
+#   - ファイル生成テスト: codex各ロールの生成確認
 #   - 内容検証テスト: 空でないこと、ロール名・CLI固有セクション含有
-#   - AGENTS.md / copilot-instructions.md 生成テスト
+#   - AGENTS.md 存在テスト
 #   - 冪等性テスト: 2回ビルドで差分なし
-#
-# Phase 2+3未実装テストについて:
-#   copilot生成、AGENTS.md、copilot-instructions.md のテストは
-#   build_instructions.shが拡張されるまでFAILする（受入基準）。
-#   SKIP は使用しない（SKIP=0ルール遵守）。
 
 # --- セットアップ ---
 
@@ -49,26 +43,10 @@ setup() {
     [ -d "$OUTPUT_DIR" ]
 }
 
-@test "build: generated/ contains at least 6 files" {
+@test "build: generated/ contains at least 4 files" {
     local count
     count=$(find "$OUTPUT_DIR" -name "*.md" -type f | wc -l)
-    [ "$count" -ge 6 ]
-}
-
-# =============================================================================
-# ファイル生成テスト — Claude
-# =============================================================================
-
-@test "claude: shogun.md generated" {
-    [ -f "$OUTPUT_DIR/shogun.md" ]
-}
-
-@test "claude: karo.md generated" {
-    [ -f "$OUTPUT_DIR/karo.md" ]
-}
-
-@test "claude: ashigaru.md generated" {
-    [ -f "$OUTPUT_DIR/ashigaru.md" ]
+    [ "$count" -ge 4 ]
 }
 
 # =============================================================================
@@ -88,36 +66,8 @@ setup() {
 }
 
 # =============================================================================
-# ファイル生成テスト — Copilot (Phase 2+3 受入基準)
-# =============================================================================
-
-@test "copilot: copilot-shogun.md generated [Phase 2+3]" {
-    [ -f "$OUTPUT_DIR/copilot-shogun.md" ]
-}
-
-@test "copilot: copilot-karo.md generated [Phase 2+3]" {
-    [ -f "$OUTPUT_DIR/copilot-karo.md" ]
-}
-
-@test "copilot: copilot-ashigaru.md generated [Phase 2+3]" {
-    [ -f "$OUTPUT_DIR/copilot-ashigaru.md" ]
-}
-
-# =============================================================================
 # 内容検証テスト — 空でないこと
 # =============================================================================
-
-@test "content: shogun.md is not empty" {
-    [ -s "$OUTPUT_DIR/shogun.md" ]
-}
-
-@test "content: karo.md is not empty" {
-    [ -s "$OUTPUT_DIR/karo.md" ]
-}
-
-@test "content: ashigaru.md is not empty" {
-    [ -s "$OUTPUT_DIR/ashigaru.md" ]
-}
 
 @test "content: codex-shogun.md is not empty" {
     [ -s "$OUTPUT_DIR/codex-shogun.md" ]
@@ -135,18 +85,6 @@ setup() {
 # 内容検証テスト — ロール名含有
 # =============================================================================
 
-@test "content: shogun.md contains shogun role reference" {
-    grep -qi "shogun\|将軍" "$OUTPUT_DIR/shogun.md"
-}
-
-@test "content: karo.md contains karo role reference" {
-    grep -qi "karo\|家老" "$OUTPUT_DIR/karo.md"
-}
-
-@test "content: ashigaru.md contains ashigaru role reference" {
-    grep -qi "ashigaru\|足軽" "$OUTPUT_DIR/ashigaru.md"
-}
-
 @test "content: codex-shogun.md contains shogun role reference" {
     grep -qi "shogun\|将軍" "$OUTPUT_DIR/codex-shogun.md"
 }
@@ -163,47 +101,21 @@ setup() {
 # 内容検証テスト — CLI固有セクション
 # =============================================================================
 
-@test "content: claude files contain Claude-specific tools" {
-    # Claude Code固有ツール: Read, Write, Edit, Bash等
-    grep -qi "claude\|Read\|Write\|Edit\|Bash" "$OUTPUT_DIR/shogun.md"
-}
-
 @test "content: codex files contain Codex-specific content" {
     grep -qi "codex\|AGENTS.md\|Codex" "$OUTPUT_DIR/codex-shogun.md"
 }
 
-@test "content: copilot files contain Copilot-specific content [Phase 2+3]" {
-    grep -qi "copilot\|Copilot" "$OUTPUT_DIR/copilot-shogun.md"
-}
-
 # =============================================================================
-# AGENTS.md 生成テスト (Phase 2+3 受入基準)
+# AGENTS.md テスト
 # =============================================================================
 
-@test "agents: AGENTS.md generated [Phase 2+3]" {
+@test "agents: AGENTS.md exists" {
     [ -f "$PROJECT_ROOT/AGENTS.md" ]
 }
 
-@test "agents: AGENTS.md contains Codex-specific content [Phase 2+3]" {
+@test "agents: AGENTS.md contains Codex-specific content" {
     [ -f "$PROJECT_ROOT/AGENTS.md" ] && grep -qi "codex\|agent" "$PROJECT_ROOT/AGENTS.md"
 }
-
-# =============================================================================
-# copilot-instructions.md 生成テスト (Phase 2+3 受入基準)
-# =============================================================================
-
-@test "copilot-inst: .github/copilot-instructions.md generated [Phase 2+3]" {
-    [ -f "$PROJECT_ROOT/.github/copilot-instructions.md" ]
-}
-
-@test "copilot-inst: contains Copilot-specific content [Phase 2+3]" {
-    [ -f "$PROJECT_ROOT/.github/copilot-instructions.md" ] && \
-        grep -qi "copilot" "$PROJECT_ROOT/.github/copilot-instructions.md"
-}
-
-# =============================================================================
-# 冪等性テスト
-# =============================================================================
 
 # =============================================================================
 # Codex /clear → /new 変換テスト

@@ -4,7 +4,7 @@
 
 **Command your AI army like a feudal warlord.**
 
-Run 10 AI coding agents in parallel — **Claude Code, OpenAI Codex, GitHub Copilot, Kimi Code** — orchestrated through a samurai-inspired hierarchy with zero coordination overhead.
+Run 10 AI coding agents in parallel — **OpenAI Codex** (primary) with **Claude Code** compatibility — orchestrated through a samurai-inspired hierarchy with zero coordination overhead.
 
 **Talk Coding, not Vibe Coding. Speak to your phone, AI executes.**
 
@@ -32,12 +32,12 @@ Run 10 AI coding agents in parallel — **Claude Code, OpenAI Codex, GitHub Copi
 
 ## What is this?
 
-**multi-agent-shogun** is a system that runs multiple AI coding CLI instances simultaneously, orchestrating them like a feudal Japanese army. Supports **Claude Code**, **OpenAI Codex**, **GitHub Copilot**, and **Kimi Code**.
+**multi-agent-shogun** is a system that runs multiple AI coding CLI instances simultaneously, orchestrating them like a feudal Japanese army. Primary CLI is **OpenAI Codex**, with **Claude Code** kept for compatibility.
 
 **Why use it?**
 - One command spawns 7 AI workers + 1 strategist executing in parallel
 - Zero wait time — give your next order while tasks run in the background
-- AI remembers your preferences across sessions (Memory MCP)
+- AI resumes tasks automatically via file-based persistence
 - Real-time progress on a dashboard
 
 ```
@@ -69,7 +69,7 @@ Most multi-agent frameworks burn API tokens on coordination. Shogun doesn't.
 | **Architecture** | Subagents inside one process | Team lead + teammates (JSON mailbox) | Graph-based state machine | Role-based agents | Feudal hierarchy via tmux |
 | **Parallelism** | Sequential (one at a time) | Multiple independent sessions | Parallel nodes (v0.2+) | Limited | **8 independent agents** |
 | **Coordination cost** | API calls per Task | Token-heavy (each teammate = separate context) | API + infra (Postgres/Redis) | API + CrewAI platform | **Zero** (YAML + tmux) |
-| **Multi-CLI** | Claude Code only | Claude Code only | Any LLM API | Any LLM API | **4 CLIs** (Claude/Codex/Copilot/Kimi) |
+| **Multi-CLI** | Claude Code only | Claude Code only | Any LLM API | Any LLM API | **2 CLIs** (Codex/Claude) |
 | **Observability** | Claude logs only | tmux split-panes or in-process | LangSmith integration | OpenTelemetry | **Live tmux panes** + dashboard |
 | **Skill discovery** | None | None | None | None | **Bottom-up auto-proposal** |
 | **Setup** | Built into Claude Code | Built-in (experimental) | Heavy (infra required) | pip install | Shell scripts |
@@ -99,14 +99,12 @@ Most AI coding tools charge per token. Running 8 Opus-grade agents through the A
 
 ### Multi-CLI Support
 
-Shogun isn't locked to one vendor. The system supports 4 CLI tools, each with unique strengths:
+Shogun uses Codex as the primary CLI, with Claude Code kept for compatibility:
 
 | CLI | Key Strength | Default Model |
 |-----|-------------|---------------|
-| **Claude Code** | Battle-tested tmux integration, Memory MCP, dedicated file tools (Read/Write/Edit/Glob/Grep) | Claude Sonnet 4.6 |
-| **OpenAI Codex** | Sandbox execution, JSONL structured output, `codex exec` headless mode, **per-model `--model` flag** | gpt-5.3-codex / **gpt-5.3-codex-spark** |
-| **GitHub Copilot** | Built-in GitHub MCP, 4 specialized agents (Explore/Task/Plan/Code-review), `/delegate` to coding agent | Claude Sonnet 4.6 |
-| **Kimi Code** | Free tier available, strong multilingual support | Kimi k2 |
+| **OpenAI Codex** (primary) | Sandbox execution, AGENTS.md auto-load, `codex exec` headless mode, **per-model `--model` flag** | o3 |
+| **Claude Code** (compatible) | Dedicated file tools (Read/Write/Edit/Glob/Grep), extended thinking control | Claude Sonnet 4.6 |
 
 A unified instruction build system generates CLI-specific instruction files from shared templates:
 
@@ -114,11 +112,10 @@ A unified instruction build system generates CLI-specific instruction files from
 instructions/
 ├── common/              # Shared rules (all CLIs)
 ├── cli_specific/        # CLI-specific tool descriptions
-│   ├── claude_tools.md  # Claude Code tools & features
-│   └── copilot_tools.md # GitHub Copilot CLI tools & features
-└── roles/               # Role definitions (shogun, karo, ashigaru)
+│   └── codex_tools.md   # Codex CLI tools & features
+└── roles/               # Role definitions (shogun, karo, ashigaru, gunshi)
     ↓ build
-CLAUDE.md / AGENTS.md / copilot-instructions.md  ← Generated per CLI
+AGENTS.md  ← Single source of truth (auto-loaded by Codex CLI)
 ```
 
 One source of truth, zero sync drift. Change a rule once, all CLIs get it.
@@ -228,14 +225,13 @@ After `first_setup.sh`, run these commands once to authenticate:
 # 1. Apply PATH changes
 source ~/.bashrc
 
-# 2. OAuth login + Bypass Permissions approval (one command)
-claude --dangerously-skip-permissions
-#    → Browser opens → Log in with Anthropic account → Return to CLI
-#    → "Bypass Permissions" prompt appears → Select "Yes, I accept" (↓ to option 2, Enter)
+# 2. Start Codex CLI with bypass approvals
+codex --dangerously-bypass-approvals-and-sandbox
+#    → If prompted for API key, set OPENAI_API_KEY
 #    → Type /exit to quit
 ```
 
-This saves credentials to `~/.claude/` — you won't need to do it again.
+Configure your OPENAI_API_KEY environment variable for Codex CLI.
 
 #### Daily startup
 
@@ -356,7 +352,7 @@ Then restart your computer and run `install.bat` again.
 | Script | Purpose | When to run |
 |--------|---------|-------------|
 | `install.bat` | Windows: WSL2 + Ubuntu setup | First time only |
-| `first_setup.sh` | Install tmux, Node.js, Claude Code CLI + Memory MCP config | First time only |
+| `first_setup.sh` | Install tmux, Node.js, Codex CLI + dependencies | First time only |
 | `shutsujin_departure.sh` | Create tmux sessions + launch CLI + load instructions + start ntfy listener | Daily |
 | `scripts/switch_cli.sh` | Live switch agent CLI/model (settings.yaml → /exit → relaunch) | As needed |
 
@@ -367,7 +363,7 @@ Then restart your computer and run `install.bat` again.
 
 ### What `shutsujin_departure.sh` does:
 - ✅ Creates tmux sessions (shogun + multiagent)
-- ✅ Launches Claude Code on all agents
+- ✅ Launches Codex CLI on all agents
 - ✅ Auto-loads instruction files for each agent
 - ✅ Resets queue files for a fresh state
 - ✅ Starts ntfy listener for phone notifications (if configured)
@@ -389,7 +385,7 @@ If you prefer to install dependencies manually:
 | Set Ubuntu as default | `wsl --set-default Ubuntu` | Required for scripts to work |
 | tmux | `sudo apt install tmux` | Terminal multiplexer |
 | Node.js v20+ | `nvm install 20` | Required for MCP servers |
-| Claude Code CLI | `curl -fsSL https://claude.ai/install.sh \| bash` | Official Anthropic CLI (native version recommended; npm version deprecated) |
+| Codex CLI | `npm install -g @openai/codex` | Primary AI CLI |
 
 </details>
 
@@ -506,16 +502,14 @@ You: Command → Shogun: Delegates → You: Give next command immediately
 
 No waiting for long tasks to finish.
 
-### 🧠 3. Cross-Session Memory (Memory MCP)
+### 🧠 3. File-Based Persistence
 
-Your AI remembers your preferences:
+Context and preferences persist across sessions via project files:
 
 ```
-Session 1: Tell it "I prefer simple approaches"
-            → Saved to Memory MCP
-
-Session 2: AI loads memory on startup
-            → Stops suggesting complex solutions
+config/settings.yaml    # System preferences
+context/                # Project context files
+queue/tasks/            # Active task state
 ```
 
 ### 📡 4. Event-Driven Communication (Zero Polling)
@@ -629,16 +623,15 @@ Use cases:
 - Show error messages
 - Compare before/after states
 
-### 📁 7. Context Management (4-Layer Architecture)
+### 📁 7. Context Management (3-Layer Architecture)
 
-Efficient knowledge sharing through a four-layer context system:
+Efficient knowledge sharing through a three-layer context system:
 
 | Layer | Location | Purpose |
 |-------|----------|---------|
-| Layer 1: Memory MCP | `memory/shogun_memory.jsonl` | Cross-project, cross-session long-term memory |
-| Layer 2: Project | `config/projects.yaml`, `projects/<id>.yaml`, `context/{project}.md` | Project-specific information and technical knowledge |
-| Layer 3: YAML Queue | `queue/shogun_to_karo.yaml`, `queue/tasks/`, `queue/reports/` | Task management — source of truth for instructions and reports |
-| Layer 4: Session | CLAUDE.md, instructions/*.md | Working context (wiped by `/clear`) |
+| Layer 1: Project | `config/projects.yaml`, `projects/<id>.yaml`, `context/{project}.md` | Project-specific information and technical knowledge |
+| Layer 2: YAML Queue | `queue/shogun_to_karo.yaml`, `queue/tasks/`, `queue/reports/` | Task management |
+| Layer 3: Session | AGENTS.md, instructions/*.md | Working context (wiped by `/new`) |
 
 This design enables:
 - Any Ashigaru can work on any project
@@ -646,16 +639,15 @@ This design enables:
 - Clear separation of concerns
 - Knowledge survives across sessions
 
-#### /clear Protocol (Cost Optimization)
+#### Context Reset Protocol (Cost Optimization)
 
-As agents work, their session context (Layer 4) grows, increasing API costs. `/clear` wipes session memory and resets costs. Layers 1–3 persist as files, so nothing is lost.
+As agents work, their session context (Layer 3) grows, increasing API costs. Context reset (`/new`) starts fresh. Layers 1-2 persist as files, so nothing is lost.
 
-Recovery cost after `/clear`: **~6,800 tokens** (42% improved from v1 — CLAUDE.md YAML conversion + English-only instructions reduced token cost by 70%)
+Recovery cost after context reset: **~6,800 tokens** (42% improved from v1 — AGENTS.md YAML conversion + English-only instructions reduced token cost by 70%)
 
-1. CLAUDE.md (auto-loaded) → recognizes itself as part of the Shogun System
+1. AGENTS.md (auto-loaded) → recognizes itself as part of the Shogun System
 2. `tmux display-message -t "$TMUX_PANE" -p '#{@agent_id}'` → identifies its own number
-3. Memory MCP read → restores the Lord's preferences (~700 tokens)
-4. Task YAML read → picks up the next assignment (~800 tokens)
+3. Task YAML read → picks up the next assignment (~800 tokens)
 
 The key insight: designing **what not to load** is what drives cost savings.
 
@@ -1136,7 +1128,6 @@ MCP (Model Context Protocol) servers extend Claude's capabilities. Here's how to
 MCP servers give Claude access to external tools:
 - **Notion MCP** → Read and write Notion pages
 - **GitHub MCP** → Create PRs, manage issues
-- **Memory MCP** → Persist memory across sessions
 
 ### Installing MCP Servers
 
@@ -1155,12 +1146,9 @@ claude mcp add github -e GITHUB_PERSONAL_ACCESS_TOKEN=your_pat_here -- npx -y @m
 
 # 4. Sequential Thinking - Step-by-step reasoning for complex problems
 claude mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
-
-# 5. Memory - Cross-session long-term memory (recommended!)
-# ✅ Auto-configured by first_setup.sh
-# To reconfigure manually:
-claude mcp add memory -e MEMORY_FILE_PATH="$PWD/memory/shogun_memory.jsonl" -- npx -y @modelcontextprotocol/server-memory
 ```
+
+> Note: These MCP commands use the `claude` CLI. If running Codex as primary, MCP configuration is managed separately.
 
 ### Verify installation
 
@@ -1281,9 +1269,7 @@ Priority: Token > Basic > None. If neither is set, no auth headers are sent (bac
 │      │                                                              │
 │      ├── Check/install tmux                                         │
 │      ├── Check/install Node.js v20+ (via nvm)                      │
-│      ├── Check/install Claude Code CLI (native version)             │
-│      │       ※ Proposes migration if npm version detected           │
-│      └── Configure Memory MCP server                                │
+│      └── Check/install Codex CLI                                    │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                    Daily Startup (run every day)                     │
@@ -1297,7 +1283,7 @@ Priority: Token > Basic > None. If neither is set, no auth headers are sent (bac
 │      │                                                              │
 │      ├──▶ Reset queue files and dashboard                           │
 │      │                                                              │
-│      └──▶ Launch Claude Code on all agents                          │
+│      └──▶ Launch Codex CLI on all agents                            │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -1308,10 +1294,10 @@ Priority: Token > Basic > None. If neither is set, no auth headers are sent (bac
 <summary><b>shutsujin_departure.sh Options</b> (click to expand)</summary>
 
 ```bash
-# Default: Full startup (tmux sessions + Claude Code launch)
+# Default: Full startup (tmux sessions + Codex CLI launch)
 ./shutsujin_departure.sh
 
-# Session setup only (no Claude Code launch)
+# Session setup only (no Codex CLI launch)
 ./shutsujin_departure.sh -s
 ./shutsujin_departure.sh --setup-only
 
@@ -1354,9 +1340,9 @@ tmux attach-session -t shogun     # Connect and give commands
 ```bash
 ./shutsujin_departure.sh -s       # Create sessions only
 
-# Manually launch Claude Code on specific agents
-tmux send-keys -t shogun:0 'claude --dangerously-skip-permissions' Enter
-tmux send-keys -t multiagent:0.0 'claude --dangerously-skip-permissions' Enter
+# Manually launch Codex CLI on specific agents
+tmux send-keys -t shogun:0 'codex --dangerously-bypass-approvals-and-sandbox' Enter
+tmux send-keys -t multiagent:0.0 'codex --dangerously-bypass-approvals-and-sandbox' Enter
 ```
 
 **Restart after crash:**
@@ -1408,12 +1394,11 @@ multi-agent-shogun/
 │   ├── ashigaru.md           # Ashigaru instructions
 │   ├── gunshi.md             # Gunshi (strategist) instructions
 │   └── cli_specific/         # CLI-specific tool descriptions
-│       ├── claude_tools.md   # Claude Code tools & features
-│       └── copilot_tools.md  # GitHub Copilot CLI tools & features
+│       └── codex_tools.md   # Codex CLI tools & features
 │
 ├── lib/
-│   ├── agent_status.sh       # Shared busy/idle detection (Claude Code + Codex)
-│   ├── cli_adapter.sh        # Multi-CLI adapter (Claude/Codex/Copilot/Kimi)
+│   ├── agent_status.sh       # Shared busy/idle detection
+│   ├── cli_adapter.sh        # CLI adapter (Codex/Claude)
 │   └── ntfy_auth.sh          # ntfy authentication helper
 │
 ├── scripts/                  # Utility scripts
@@ -1461,9 +1446,8 @@ multi-agent-shogun/
 │   ├── shogun-model-switch/  # Live CLI/model switching
 │   └── shogun-readme-sync/   # README sync
 │
-├── memory/                   # Memory MCP persistent storage
 ├── dashboard.md              # Real-time status board
-└── CLAUDE.md                 # System instructions (auto-loaded)
+└── AGENTS.md                 # System instructions (auto-loaded by Codex)
 ```
 
 </details>
@@ -1516,20 +1500,18 @@ This separation lets the Shogun System coordinate across multiple external proje
 ## Troubleshooting
 
 <details>
-<summary><b>Using npm version of Claude Code CLI?</b></summary>
+<summary><b>Codex CLI not found?</b></summary>
 
-The npm version (`npm install -g @anthropic-ai/claude-code`) is officially deprecated. Re-run `first_setup.sh` to detect and migrate to the native version.
+Install the Codex CLI via npm:
 
 ```bash
-# Re-run first_setup.sh
+npm install -g @openai/codex
+
+# Verify installation
+codex --version
+
+# If issues persist, re-run first_setup.sh
 ./first_setup.sh
-
-# If npm version is detected:
-# ⚠️ npm version of Claude Code CLI detected (officially deprecated)
-# Install native version? [Y/n]:
-
-# After selecting Y, uninstall npm version:
-npm uninstall -g @anthropic-ai/claude-code
 ```
 
 </details>
@@ -1539,8 +1521,8 @@ npm uninstall -g @anthropic-ai/claude-code
 
 MCP tools are lazy-loaded. Search first, then use:
 ```
-ToolSearch("select:mcp__memory__read_graph")
-mcp__memory__read_graph()
+ToolSearch("select:mcp__github__list_issues")
+mcp__github__list_issues()
 ```
 
 </details>
@@ -1548,7 +1530,7 @@ mcp__memory__read_graph()
 <details>
 <summary><b>Agents asking for permissions?</b></summary>
 
-Agents should start with `--dangerously-skip-permissions`. This is handled automatically by `shutsujin_departure.sh`.
+Agents should start with `--dangerously-bypass-approvals-and-sandbox`. This is handled automatically by `shutsujin_departure.sh`.
 
 </details>
 
@@ -1570,16 +1552,16 @@ tmux attach-session -t multiagent
 **Correct restart methods:**
 
 ```bash
-# Method 1: Run claude directly in the pane
-claude --model opus --dangerously-skip-permissions
+# Method 1: Run codex directly in the pane
+codex --model o3 --dangerously-bypass-approvals-and-sandbox
 
 # Method 2: Karo force-restarts via respawn-pane (also fixes nesting)
-tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permissions'
+tmux respawn-pane -t shogun:0.0 -k 'codex --model o3 --dangerously-bypass-approvals-and-sandbox'
 ```
 
 **If you accidentally nested tmux:**
 1. Press `Ctrl+B` then `d` to detach (exits the inner session)
-2. Run `claude` directly (don't use `css`)
+2. Run `codex` directly (don't use `css`)
 3. If detach doesn't work, use `tmux respawn-pane -k` from another pane to force-reset
 
 </details>
@@ -1644,12 +1626,12 @@ Even if you're not comfortable with keyboard shortcuts, you can switch, scroll, 
 
 ## What's New in v3.0 — Multi-CLI
 
-> **Shogun is no longer Claude-only.** Mix and match 4 AI coding CLIs in a single army.
+> **Codex-primary migration.** OpenAI Codex is now the primary CLI, with Claude Code kept for compatibility.
 
-- **Multi-CLI as first-class architecture** — `lib/cli_adapter.sh` dynamically selects CLI per agent. Change one line in `settings.yaml` to swap any worker between Claude Code, Codex, Copilot, or Kimi
+- **Codex-primary architecture** — `lib/cli_adapter.sh` dynamically selects CLI per agent. Change one line in `settings.yaml` to swap any worker between Codex or Claude Code
 - **OpenAI Codex CLI integration** — GPT-5.3-codex with `--dangerously-bypass-approvals-and-sandbox` for true autonomous execution. `--no-alt-screen` makes agent activity visible in tmux
-- **CLI bypass flag discovery** — `--full-auto` is NOT fully automatic (it's `-a on-request`). Documented the correct flags for all 4 CLIs
-- **Hybrid architecture** — Command layer (Shogun + Karo) stays on Claude Code for Memory MCP and mailbox integration. Worker layer (Ashigaru) is CLI-agnostic
+- **AGENTS.md auto-load** — Codex CLI automatically loads AGENTS.md as the single source of truth for agent instructions
+- **Hybrid architecture** — All agents default to Codex CLI. Claude Code available for compatibility where needed
 - **Community-contributed CLI adapters** — Thanks to [@yuto-ts](https://github.com/yuto-ts) (cli_adapter.sh), [@circlemouth](https://github.com/circlemouth) (Codex support), [@koba6316](https://github.com/koba6316) (task routing)
 
 <details>

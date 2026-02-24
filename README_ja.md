@@ -4,7 +4,7 @@
 
 **AIコーディング軍団統率システム — Multi-CLI対応**
 
-*コマンド1つで、10体のAIエージェントが並列稼働 — **Claude Code / OpenAI Codex / GitHub Copilot / Kimi Code** 混成軍*
+*コマンド1つで、10体のAIエージェントが並列稼働 — **OpenAI Codex**（メイン）+ **Claude Code** 互換*
 
 **Talk Coding — Vibe Codingではなく、スマホに話すだけでAIが実行**
 
@@ -32,12 +32,12 @@
 
 ## これは何？
 
-**multi-agent-shogun** は、複数のAIコーディングCLIインスタンスを同時に実行し、戦国時代の軍制のように統率するシステムです。**Claude Code**、**OpenAI Codex**、**GitHub Copilot**、**Kimi Code** の4CLIに対応。
+**multi-agent-shogun** は、複数のAIコーディングCLIインスタンスを同時に実行し、戦国時代の軍制のように統率するシステムです。メインCLIは **OpenAI Codex**、互換性のために **Claude Code** にも対応。
 
 **なぜ使うのか？**
 - 1つの命令で、7体のAIワーカー+1体の軍師が並列で実行
 - 待ち時間なし - タスクがバックグラウンドで実行中も次の命令を出せる
-- AIがセッションを跨いであなたの好みを記憶（Memory MCP）
+- AIがファイルベースの永続化でタスクを自動再開
 - ダッシュボードでリアルタイム進捗確認
 
 ```
@@ -69,7 +69,7 @@
 | **アーキテクチャ** | 1プロセス内のサブエージェント | リード+チームメイト（JSONメールボックス） | グラフベースの状態機械 | ロールベースエージェント | tmux経由の階層構造 |
 | **並列性** | 逐次実行（1つずつ） | 複数の独立セッション | 並列ノード（v0.2+） | 限定的 | **8体の独立エージェント** |
 | **連携コスト** | TaskごとにAPIコール | 高い（各チームメイト=別コンテキスト） | API + インフラ（Postgres/Redis） | API + CrewAIプラットフォーム | **ゼロ**（YAML + tmux） |
-| **Multi-CLI** | Claude Codeのみ | Claude Codeのみ | 任意のLLM API | 任意のLLM API | **4 CLI**（Claude/Codex/Copilot/Kimi） |
+| **Multi-CLI** | Claude Codeのみ | Claude Codeのみ | 任意のLLM API | 任意のLLM API | **2 CLI**（Codex/Claude） |
 | **可観測性** | Claudeのログのみ | tmux分割ペインまたはインプロセス | LangSmith連携 | OpenTelemetry | **ライブtmuxペイン** + ダッシュボード |
 | **スキル発見** | なし | なし | なし | なし | **ボトムアップ自動提案** |
 | **セットアップ** | Claude Code内蔵 | 内蔵（実験的） | 重い（インフラ必要） | pip install | シェルスクリプト |
@@ -99,14 +99,12 @@
 
 ### Multi-CLI対応
 
-将軍システムは特定ベンダーに依存しない。4つのCLIツールに対応し、それぞれの強みを活かす：
+将軍システムはCodexをメインCLIに、Claude Codeを互換性のために使用する：
 
 | CLI | 特徴 | デフォルトモデル |
 |-----|------|-----------------|
-| **Claude Code** | tmux統合の実績、Memory MCP、専用ファイルツール（Read/Write/Edit/Glob/Grep） | Claude Sonnet 4.6 |
-| **OpenAI Codex** | サンドボックス実行、JSONL構造化出力、`codex exec` ヘッドレスモード | gpt-5.3-codex |
-| **GitHub Copilot** | GitHub MCP組込、4種の特化エージェント（Explore/Task/Plan/Code-review）、`/delegate` | Claude Sonnet 4.6 |
-| **Kimi Code** | 無料プランあり、多言語サポート | Kimi k2 |
+| **OpenAI Codex**（メイン） | サンドボックス実行、AGENTS.md自動読み込み、`codex exec` ヘッドレスモード、**モデル別 `--model` フラグ** | o3 |
+| **Claude Code**（互換） | 専用ファイルツール（Read/Write/Edit/Glob/Grep）、Extended Thinking制御 | Claude Sonnet 4.6 |
 
 統一ビルドシステムが共有テンプレートからCLI固有の指示書を自動生成：
 
@@ -114,11 +112,10 @@
 instructions/
 ├── common/              # 共通ルール（全CLI共通）
 ├── cli_specific/        # CLI固有のツール説明
-│   ├── claude_tools.md  # Claude Code ツール・機能
-│   └── copilot_tools.md # GitHub Copilot CLI ツール・機能
+│   └── codex_tools.md   # Codex CLI ツール・機能
 └── roles/               # ロール定義（将軍、家老、足軽）
     ↓ ビルド
-CLAUDE.md / AGENTS.md / copilot-instructions.md  ← CLI別に生成
+AGENTS.md  ← 唯一の正（Codex CLIが自動読み込み）
 ```
 
 ルールの変更は1箇所。全CLIに反映。同期ズレなし。
@@ -228,14 +225,13 @@ cd /mnt/c/tools/multi-agent-shogun
 # 1. PATHの反映
 source ~/.bashrc
 
-# 2. OAuthログイン + Bypass Permissions承認（1コマンドで完了）
-claude --dangerously-skip-permissions
-#    → ブラウザが開く → Anthropicアカウントでログイン → CLIに戻る
-#    → 「Bypass Permissions」の承認画面 → 「Yes, I accept」を選択（↓キーで2を選んでEnter）
+# 2. Codex CLIをbypass approvalsモードで起動
+codex --dangerously-bypass-approvals-and-sandbox
+#    → APIキーの入力を求められたらOPENAI_API_KEYを設定
 #    → /exit で退出
 ```
 
-認証情報は `~/.claude/` に保存され、以降は不要。
+OPENAI_API_KEY環境変数をCodex CLI用に設定してください。
 
 #### 📅 毎日の起動（初回セットアップ後）
 
@@ -347,7 +343,7 @@ wsl --install
 | スクリプト | 用途 | 実行タイミング |
 |-----------|------|---------------|
 | `install.bat` | Windows: WSL2 + Ubuntu のセットアップ | 初回のみ |
-| `first_setup.sh` | tmux、Node.js、Claude Code CLI のインストール + Memory MCP設定 | 初回のみ |
+| `first_setup.sh` | tmux、Node.js、Codex CLI のインストール + 依存関係 | 初回のみ |
 | `shutsujin_departure.sh` | tmuxセッション作成 + CLI起動 + 指示書読み込み + ntfyリスナー起動 | 毎日 |
 | `scripts/switch_cli.sh` | エージェントのCLI/モデルをライブ切替（settings.yaml → /exit → 再起動） | 必要時 |
 
@@ -358,7 +354,7 @@ wsl --install
 
 ### `shutsujin_departure.sh` が行うこと：
 - ✅ tmuxセッションを作成（shogun + multiagent）
-- ✅ 全エージェントでClaude Codeを起動
+- ✅ 全エージェントでCodex CLIを起動
 - ✅ 各エージェントに指示書を自動読み込み
 - ✅ キューファイルをリセットして新しい状態に
 - ✅ ntfyリスナーを起動してスマホ通知を有効化（設定済みの場合）
@@ -380,7 +376,7 @@ wsl --install
 | Ubuntuをデフォルトに設定 | `wsl --set-default Ubuntu` | スクリプトの動作に必要 |
 | tmux | `sudo apt install tmux` | ターミナルマルチプレクサ |
 | Node.js v20+ | `nvm install 20` | MCPサーバーに必要 |
-| Claude Code CLI | `curl -fsSL https://claude.ai/install.sh \| bash` | Anthropic公式CLI（ネイティブ版を推奨。npm版は非推奨） |
+| Codex CLI | `npm install -g @openai/codex` | メインAI CLI |
 
 </details>
 
@@ -458,7 +454,7 @@ JavaScriptフレームワーク上位5つを調査して比較表を作成せよ
 | 足軽 1 | Notion MCP調査 |
 | 足軽 2 | GitHub MCP調査 |
 | 足軽 3 | Playwright MCP調査 |
-| 足軽 4 | Memory MCP調査 |
+| 足軽 4 | Filesystem MCP調査 |
 | 足軽 5 | Sequential Thinking MCP調査 |
 
 5体の足軽が同時に調査開始。リアルタイムで作業を見ることができます。
@@ -497,16 +493,14 @@ JavaScriptフレームワーク上位5つを調査して比較表を作成せよ
 
 長いタスクの完了を待つ必要はありません。
 
-### 🧠 3. セッション間記憶（Memory MCP）
+### 🧠 3. ファイルベース永続化
 
-AIがあなたの好みを記憶します：
+コンテキストと設定がプロジェクトファイル経由でセッション間を跨いで永続化：
 
 ```
-セッション1: 「シンプルな方法が好き」と伝える
-            → Memory MCPに保存
-
-セッション2: 起動時にAIがメモリを読み込む
-            → 複雑な方法を提案しなくなる
+config/settings.yaml    # システム設定
+context/                # プロジェクトコンテキストファイル
+queue/tasks/            # アクティブなタスク状態
 ```
 
 ### 📡 4. イベント駆動通信（ポーリングなし）
@@ -590,7 +584,7 @@ multiagent:agents.1            BUSY       ashigaru1
 multiagent:agents.8            BUSY       gunshi
 ```
 
-判定は **Claude Code** と **Codex CLI** の両方に対応。各tmuxペインの末尾5行からCLI固有のプロンプト/スピナーパターンを検出。判定ロジックは `lib/agent_status.sh` に分離されており、自作スクリプトからも利用可能：
+判定は **Codex CLI** と **Claude Code** の両方に対応。各tmuxペインの末尾5行からCLI固有のプロンプト/スピナーパターンを検出。判定ロジックは `lib/agent_status.sh` に分離されており、自作スクリプトからも利用可能：
 
 ```bash
 source lib/agent_status.sh
@@ -599,7 +593,7 @@ agent_is_busy_check "multiagent:agents.3" && echo "稼働中" || echo "待機中
 
 ### 📸 6. スクリーンショット連携
 
-VSCode拡張のClaude Codeはスクショを貼り付けて事象を説明できます。このCLIシステムでも同等の機能を実現：
+VSCode拡張のAIツールはスクショを貼り付けて事象を説明できます。このCLIシステムでも同等の機能を実現：
 
 ```
 # config/settings.yaml でスクショフォルダを設定
@@ -619,16 +613,15 @@ screenshot:
 - エラーメッセージを見せる
 - 変更前後の状態を比較
 
-### 📁 7. コンテキスト管理
+### 📁 7. コンテキスト管理（三層アーキテクチャ）
 
-効率的な知識共有のため、四層構造のコンテキストを採用：
+効率的な知識共有のため、三層構造のコンテキストを採用：
 
 | レイヤー | 場所 | 用途 |
 |---------|------|------|
-| Layer 1: Memory MCP | `memory/shogun_memory.jsonl` | プロジェクト横断・セッションを跨ぐ長期記憶 |
-| Layer 2: Project | `config/projects.yaml`, `projects/<id>.yaml`, `context/{project}.md` | プロジェクト固有情報・技術知見 |
-| Layer 3: YAML Queue | `queue/shogun_to_karo.yaml`, `queue/tasks/`, `queue/reports/` | タスク管理・指示と報告の正データ |
-| Layer 4: Session | CLAUDE.md, instructions/*.md | 作業中コンテキスト（/clearで破棄） |
+| Layer 1: Project | `config/projects.yaml`, `projects/<id>.yaml`, `context/{project}.md` | プロジェクト固有情報・技術知見 |
+| Layer 2: YAML Queue | `queue/shogun_to_karo.yaml`, `queue/tasks/`, `queue/reports/` | タスク管理・指示と報告の正データ |
+| Layer 3: Session | AGENTS.md, instructions/*.md | 作業中コンテキスト（/newで破棄） |
 
 この設計により：
 - どの足軽でも任意のプロジェクトを担当可能
@@ -636,16 +629,15 @@ screenshot:
 - 関心の分離が明確
 - セッション間の知識永続化
 
-#### /clear プロトコル（コスト最適化）
+#### コンテキストリセットプロトコル（コスト最適化）
 
-長時間作業するとコンテキスト（Layer 4）が膨れ、APIコストが増大する。`/clear` でセッション記憶を消去すれば、コストがリセットされる。Layer 1〜3はファイルとして残るので失われない。
+長時間作業するとコンテキスト（Layer 3）が膨れ、APIコストが増大する。コンテキストリセット（`/new`）で新しいセッションを開始すれば、コストがリセットされる。Layer 1〜2はファイルとして残るので失われない。
 
-`/clear` 後の復帰コスト: **約6,800トークン**（v1から42%改善 — CLAUDE.mdのYAML化 + 英語のみの指示書でトークンコストを70%削減）
+コンテキストリセット後の復帰コスト: **約6,800トークン**（v1から42%改善 — AGENTS.mdのYAML化 + 英語のみの指示書でトークンコストを70%削減）
 
-1. CLAUDE.md（自動読み込み）→ shogunシステムの一員と認識
+1. AGENTS.md（自動読み込み）→ shogunシステムの一員と認識
 2. `tmux display-message -t "$TMUX_PANE" -p '#{@agent_id}'` → 自分の番号を確認
-3. Memory MCP 読み込み → 殿の好みを復元（~700トークン）
-4. タスクYAML 読み込み → 次の仕事を確認（~800トークン）
+3. タスクYAML 読み込み → 次の仕事を確認（~800トークン）
 
 「何を読ませないか」の設計がコスト削減に効いている。
 
@@ -1043,7 +1035,7 @@ tmux display-message -t "$TMUX_PANE" -p '#{@agent_id}'
 ```
 `-t "$TMUX_PANE"` が必須。省略するとアクティブペイン（操作中のペイン）の値が返り、誤認識の原因になる。
 
-モデル名は `@model_name`、現在のタスクの要約は `@current_task` として保存され、いずれも `pane-border-format` で常時表示されます。Claude Codeがペインタイトルを上書きしても、これらのユーザーオプションは消えません。
+モデル名は `@model_name`、現在のタスクの要約は `@current_task` として保存され、いずれも `pane-border-format` で常時表示されます。CLIがペインタイトルを上書きしても、これらのユーザーオプションは消えません。
 
 ### なぜ dashboard.md は家老のみが更新するのか
 
@@ -1109,7 +1101,6 @@ MCP（Model Context Protocol）サーバはClaudeの機能を拡張します。�
 MCPサーバはClaudeに外部ツールへのアクセスを提供します：
 - **Notion MCP** → Notionページの読み書き
 - **GitHub MCP** → PR作成、Issue管理
-- **Memory MCP** → セッション間で記憶を保持
 
 ### MCPサーバのインストール
 
@@ -1128,11 +1119,6 @@ claude mcp add github -e GITHUB_PERSONAL_ACCESS_TOKEN=your_pat_here -- npx -y @m
 
 # 4. Sequential Thinking - 複雑な問題を段階的に思考
 claude mcp add sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
-
-# 5. Memory - セッション間の長期記憶（推奨！）
-# ✅ first_setup.sh で自動設定済み
-# 手動で再設定する場合:
-claude mcp add memory -e MEMORY_FILE_PATH="$PWD/memory/shogun_memory.jsonl" -- npx -y @modelcontextprotocol/server-memory
 ```
 
 ### インストール確認
@@ -1155,7 +1141,7 @@ claude mcp list
 実行される処理:
 1. 将軍が家老に委譲
 2. 家老が割り当て:
-   - 足軽1: GitHub Copilotを調査
+   - 足軽1: OpenAI Codexを調査
    - 足軽2: Cursorを調査
    - 足軽3: Claude Codeを調査
    - 足軽4: Codeiumを調査
@@ -1252,9 +1238,7 @@ cp config/ntfy_auth.env.sample config/ntfy_auth.env
 │      │                                                              │
 │      ├── tmuxのチェック/インストール                                  │
 │      ├── Node.js v20+のチェック/インストール (nvm経由)                │
-│      ├── Claude Code CLIのチェック/インストール（ネイティブ版）       │
-│      │       ※ npm版検出時はネイティブ版への移行を提案                │
-│      └── Memory MCPサーバー設定                                      │
+│      └── Codex CLIのチェック/インストール                             │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │                      毎日の起動（毎日実行）                           │
@@ -1268,7 +1252,7 @@ cp config/ntfy_auth.env.sample config/ntfy_auth.env
 │      │                                                              │
 │      ├──▶ キューファイルとダッシュボードをリセット                     │
 │      │                                                              │
-│      └──▶ 全エージェントでClaude Codeを起動                          │
+│      └──▶ 全エージェントでCodex CLIを起動                             │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -1279,10 +1263,10 @@ cp config/ntfy_auth.env.sample config/ntfy_auth.env
 <summary><b>shutsujin_departure.sh オプション</b>（クリックで展開）</summary>
 
 ```bash
-# デフォルト: フル起動（tmuxセッション + Claude Code起動）
+# デフォルト: フル起動（tmuxセッション + Codex CLI起動）
 ./shutsujin_departure.sh
 
-# セッションセットアップのみ（Claude Code起動なし）
+# セッションセットアップのみ（Codex CLI起動なし）
 ./shutsujin_departure.sh -s
 ./shutsujin_departure.sh --setup-only
 
@@ -1325,9 +1309,9 @@ tmux attach-session -t shogun     # 接続してコマンドを出す
 ```bash
 ./shutsujin_departure.sh -s       # セッションのみ作成
 
-# 特定のエージェントでClaude Codeを手動起動
-tmux send-keys -t shogun:0 'claude --dangerously-skip-permissions' Enter
-tmux send-keys -t multiagent:0.0 'claude --dangerously-skip-permissions' Enter
+# 特定のエージェントでCodex CLIを手動起動
+tmux send-keys -t shogun:0 'codex --dangerously-bypass-approvals-and-sandbox' Enter
+tmux send-keys -t multiagent:0.0 'codex --dangerously-bypass-approvals-and-sandbox' Enter
 ```
 
 **クラッシュ後の再起動：**
@@ -1379,12 +1363,11 @@ multi-agent-shogun/
 │   ├── ashigaru.md           # 足軽の指示書
 │   ├── gunshi.md             # 軍師の指示書
 │   └── cli_specific/         # CLI固有のツール説明
-│       ├── claude_tools.md   # Claude Code ツール・機能
-│       └── copilot_tools.md  # GitHub Copilot CLI ツール・機能
+│       └── codex_tools.md   # Codex CLI ツール・機能
 │
 ├── lib/
-│   ├── agent_status.sh       # 共有 稼働/待機 判定（Claude Code + Codex）
-│   ├── cli_adapter.sh        # Multi-CLIアダプタ（Claude/Codex/Copilot/Kimi）
+│   ├── agent_status.sh       # 共有 稼働/待機 判定（Codex + Claude）
+│   ├── cli_adapter.sh        # Multi-CLIアダプタ（Codex/Claude）
 │   └── ntfy_auth.sh          # ntfy認証ヘルパー
 │
 ├── scripts/                  # ユーティリティスクリプト
@@ -1432,9 +1415,8 @@ multi-agent-shogun/
 │   ├── shogun-model-switch/  # ライブCLI/モデル切替
 │   └── shogun-readme-sync/   # README同期
 │
-├── memory/                   # Memory MCP保存場所
 ├── dashboard.md              # リアルタイム状況一覧
-└── CLAUDE.md                 # システム指示書（自動読み込み）
+└── AGENTS.md                 # システム指示書（Codexが自動読み込み）
 ```
 
 </details>
@@ -1487,20 +1469,16 @@ current_tasks:
 ## 🔧 トラブルシューティング
 
 <details>
-<summary><b>npm版のClaude Code CLIを使っている？</b></summary>
+<summary><b>Codex CLIがインストールされていない？</b></summary>
 
-npm版（`npm install -g @anthropic-ai/claude-code`）は公式で非推奨（deprecated）になりました。`first_setup.sh` を再実行すると、npm版を検出してネイティブ版への移行を提案します。
+Codex CLIは `npm install -g @openai/codex` でインストールできます。`first_setup.sh` を再実行すると自動的にインストールされます。
 
 ```bash
 # first_setup.sh を再実行
 ./first_setup.sh
 
-# npm版が検出されると以下のメッセージが表示される:
-# ⚠️ npm版 Claude Code CLI が検出されました（公式非推奨）
-# ネイティブ版をインストールしますか? [Y/n]:
-
-# Y を選択後、npm版をアンインストール:
-npm uninstall -g @anthropic-ai/claude-code
+# または手動でインストール:
+npm install -g @openai/codex
 ```
 
 </details>
@@ -1512,11 +1490,11 @@ MCPツールは「遅延ロード」方式で、最初にロードが必要で�
 
 ```
 # 間違い - ツールがロードされていない
-mcp__memory__read_graph()  ← エラー！
+mcp__github__list_issues()  ← エラー！
 
 # 正しい - 先にロード
-ToolSearch("select:mcp__memory__read_graph")
-mcp__memory__read_graph()  ← 動作！
+ToolSearch("select:mcp__github__list_issues")
+mcp__github__list_issues()  ← 動作！
 ```
 
 </details>
@@ -1524,11 +1502,7 @@ mcp__memory__read_graph()  ← 動作！
 <details>
 <summary><b>エージェントが権限を求めてくる？</b></summary>
 
-`--dangerously-skip-permissions` 付きで起動していることを確認：
-
-```bash
-claude --dangerously-skip-permissions --system-prompt "..."
-```
+エージェントは `--dangerously-skip-permissions`（Claude）または `--dangerously-bypass-approvals-and-sandbox`（Codex）付きで起動する必要があります。これは `shutsujin_departure.sh` が自動的に処理します。
 
 </details>
 
@@ -1544,23 +1518,23 @@ tmux attach-session -t multiagent
 </details>
 
 <details>
-<summary><b>将軍やエージェントが落ちた？（Claude Codeプロセスがkillされた）</b></summary>
+<summary><b>将軍やエージェントが落ちた？（CLIプロセスがkillされた）</b></summary>
 
 **`css` 等のtmuxセッション起動エイリアスを使って再起動してはいけません。** これらのエイリアスはtmuxセッションを作成するため、既存のtmuxペイン内で実行するとセッションがネスト（入れ子）になり、入力が壊れてペインが使用不能になります。
 
 **正しい再起動方法：**
 
 ```bash
-# 方法1: ペイン内でclaudeを直接実行
-claude --model opus --dangerously-skip-permissions
+# 方法1: ペイン内でcodexを直接実行
+codex --model o3 --dangerously-bypass-approvals-and-sandbox
 
 # 方法2: 家老がrespawn-paneで強制再起動（ネストも解消される）
-tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permissions'
+tmux respawn-pane -t shogun:0.0 -k 'codex --model o3 --dangerously-bypass-approvals-and-sandbox'
 ```
 
 **誤ってtmuxをネストしてしまった場合：**
 1. `Ctrl+B` の後 `d` でデタッチ（内側のセッションから離脱）
-2. その後 `claude` を直接実行（`css` は使わない）
+2. その後 `codex` を直接実行（`css` は使わない）
 3. デタッチが効かない場合は、別のペインから `tmux respawn-pane -k` で強制リセット
 
 </details>
@@ -1607,7 +1581,7 @@ tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permi
 - **Bloom→エージェントルーティング** — 動的モデル切り替えをエージェントレベルのルーティングに置換。L1-L3→足軽、L4-L6→軍師。セッション中の `/model opus` 昇格は不要に
 - **軍師（Gunshi）がファーストクラスエージェントに** — ペイン8の戦略参謀。深い分析、設計レビュー、アーキテクチャ評価を担当
 - **E2Eテストスイート（19テスト、7シナリオ）** — モックCLIフレームワークが分離されたtmuxセッションでエージェント動作をシミュレート
-- **Stop hook inbox配信** — Claude Codeエージェントが `.claude/settings.json` のStop hookでターン終了時に自動的にinboxを確認。`send-keys` 割り込み問題を根絶
+- **Stop hook inbox配信** — エージェントがStop hookでターン終了時に自動的にinboxを確認。`send-keys` 割り込み問題を根絶
 - **モデルデフォルト更新** — 家老: Opus→Sonnet。軍師: Opus（深い推論）。全足軽: Sonnet（統一）
 - **Codex CLIスタートアッププロンプト** — `cli_adapter.sh` の `get_startup_prompt()` が初期 `[PROMPT]` 引数をCodex CLIに渡す
 - **YAMLスリム化ユーティリティ** — `scripts/slim_yaml.sh` が既読メッセージ・完了コマンドをアーカイブ
@@ -1627,7 +1601,7 @@ tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permi
 
 - **Multi-CLIがファーストクラスアーキテクチャに** — `lib/cli_adapter.sh` がエージェントごとにCLIを動的選択
 - **OpenAI Codex CLI統合** — GPT-5.3-codexを `--dangerously-bypass-approvals-and-sandbox` で真の自律実行
-- **ハイブリッドアーキテクチャ** — 指揮層はClaude Code固定、作業層はCLI非依存
+- **ハイブリッドアーキテクチャ** — 指揮層と作業層の両方でCodex/Claude選択可能
 - **コミュニティ貢献** — [@yuto-ts](https://github.com/yuto-ts)、[@circlemouth](https://github.com/circlemouth)、[@koba6316](https://github.com/koba6316)
 
 </details>

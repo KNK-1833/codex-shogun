@@ -27,7 +27,7 @@ allowed-tools: Bash(bash scripts/switch_cli.sh *), Read, Edit
 ```
 settings.yaml (source of truth)
     │
-    ├─ cli.agents.{id}.type      → claude | codex | copilot | kimi
+    ├─ cli.agents.{id}.type      → codex | claude
     ├─ cli.agents.{id}.model     → claude-sonnet-4-6 | claude-opus-4-6 | ...
     └─ cli.agents.{id}.thinking  → true | false
          │
@@ -127,7 +127,7 @@ inbox_watcher が `cli_restart` type を検知し、switch_cli.sh を自動実�
 3. **CLI別の exit コマンドを送信**
    - Claude: `/exit` + Enter
    - Codex: Escape → Ctrl-C → `/exit` + Enter
-   - Copilot/Kimi: Ctrl-C → `/exit` + Enter
+   - Other: `/exit` + Enter
 4. **シェルプロンプト復帰を待機**（最大15秒、1秒ごとにキャプチャ）
 5. **`build_cli_command()` で新コマンド構築**
    - thinking: false → `MAX_THINKING_TOKENS=0` prefix 付与

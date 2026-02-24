@@ -435,8 +435,7 @@ PY
 
 # ─── Send CLI command via pty direct write ───
 # For /clear and /model only. These are CLI commands, not conversation messages.
-# CLI_TYPE別分岐: claude→そのまま, codex→/clear対応・/modelスキップ,
-#                  copilot→Ctrl-C+再起動・/modelスキップ
+# CLI_TYPE別分岐: claude→そのまま, codex→/clear→/new対応・/modelスキップ
 # 実行時にtmux paneの @agent_cli を再確認し、ドリフト時はpane値を優先する。
 send_cli_command() {
     local cmd="$1"
@@ -631,7 +630,7 @@ send_context_reset() {
 # Check if the agent has an active inotifywait on its inbox.
 # If yes, the agent will self-wake — no nudge needed.
 agent_has_self_watch() {
-    # Codex/Copilot/Kimi CLIs cannot run self-watch. Only Claude Code agents can.
+    # Codex CLI cannot run self-watch. Only Claude Code agents can.
     local effective_cli
     effective_cli=$(get_effective_cli_type)
     if [[ "$effective_cli" != "claude" ]]; then
@@ -943,7 +942,7 @@ for s in data.get('specials', []):
                 # Don't reset FIRST_UNREAD_SEEN so idle-nudge works if hook misses.
                 echo "[$(date)] $normal_count unread for $AGENT_ID but agent is busy (claude) — Stop hook will deliver" >&2
             else
-                # Codex/Copilot/Kimi: No Stop hook. Pause escalation timer while busy.
+                # Codex: No Stop hook. Pause escalation timer while busy.
                 FIRST_UNREAD_SEEN=$now
                 echo "[$(date)] $normal_count unread for $AGENT_ID but agent is busy ($busy_cli) — pausing escalation timer" >&2
             fi
