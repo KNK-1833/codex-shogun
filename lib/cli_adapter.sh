@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# cli_adapter.sh — CLI抽象化レイヤー
-# Multi-CLI統合設計書 (reports/design_multi_cli_support.md) §2.2 準拠
+# cli_adapter.sh — CLI抽象化レイヤー（Codex完結版）
 #
 # 提供関数:
-#   get_cli_type(agent_id)                  → "claude" | "codex" | "copilot" | "kimi"
+#   get_cli_type(agent_id)                  → "codex" | "claude"
 #   build_cli_command(agent_id)             → 完全なコマンド文字列
 #   get_instruction_file(agent_id [,cli_type]) → 指示書パス
 #   validate_cli_availability(cli_type)     → 0=OK, 1=NG
-#   get_agent_model(agent_id)               → "opus" | "sonnet" | "haiku" | "k2.5"
+#   get_agent_model(agent_id)               → モデル名文字列
 #   get_startup_prompt(agent_id)            → 初期プロンプト文字列 or ""
 
 # プロジェクトルートを基準にsettings.yamlのパスを解決
@@ -15,8 +14,8 @@ CLI_ADAPTER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLI_ADAPTER_PROJECT_ROOT="$(cd "${CLI_ADAPTER_DIR}/.." && pwd)"
 CLI_ADAPTER_SETTINGS="${CLI_ADAPTER_SETTINGS:-${CLI_ADAPTER_PROJECT_ROOT}/config/settings.yaml}"
 
-# 許可されたCLI種別
-CLI_ADAPTER_ALLOWED_CLIS="claude codex copilot kimi"
+# 許可されたCLI種別（Codex完結。claudeは互換用に残す）
+CLI_ADAPTER_ALLOWED_CLIS="codex claude"
 
 # --- 内部ヘルパー ---
 
@@ -68,11 +67,11 @@ _cli_adapter_is_valid_cli() {
 
 # get_cli_type(agent_id)
 # 指定エージェントが使用すべきCLI種別を返す
-# フォールバック: cli.agents.{id}.type → cli.agents.{id}(文字列) → cli.default → "claude"
+# フォールバック: cli.agents.{id}.type → cli.agents.{id}(文字列) → cli.default → "codex"
 get_cli_type() {
     local agent_id="$1"
     if [[ -z "$agent_id" ]]; then
-        echo "claude"
+        echo "codex"
         return 0
     fi
 
@@ -84,36 +83,34 @@ try:
         cfg = yaml.safe_load(f) or {}
     cli = cfg.get('cli', {})
     if not isinstance(cli, dict):
-        print('claude'); sys.exit(0)
+        print('codex'); sys.exit(0)
     agents = cli.get('agents', {})
     if not isinstance(agents, dict):
-        print(cli.get('default', 'claude') if cli.get('default', 'claude') in ('claude','codex','copilot','kimi') else 'claude')
+        print(cli.get('default', 'codex') if cli.get('default', 'codex') in ('codex','claude') else 'codex')
         sys.exit(0)
     agent_cfg = agents.get('${agent_id}')
     if isinstance(agent_cfg, dict):
         t = agent_cfg.get('type', '')
-        if t in ('claude', 'codex', 'copilot', 'kimi'):
+        if t in ('codex', 'claude'):
             print(t); sys.exit(0)
     elif isinstance(agent_cfg, str):
-        if agent_cfg in ('claude', 'codex', 'copilot', 'kimi'):
+        if agent_cfg in ('codex', 'claude'):
             print(agent_cfg); sys.exit(0)
-    default = cli.get('default', 'claude')
-    if default in ('claude', 'codex', 'copilot', 'kimi'):
+    default = cli.get('default', 'codex')
+    if default in ('codex', 'claude'):
         print(default)
     else:
-        print('claude', file=sys.stderr)
-        print('claude')
+        print('codex')
 except Exception as e:
-    print('claude', file=sys.stderr)
-    print('claude')
+    print('codex')
 " 2>/dev/null)
 
     if [[ -z "$result" ]]; then
-        echo "claude"
+        echo "codex"
     else
         if ! _cli_adapter_is_valid_cli "$result"; then
-            echo "[WARN] Invalid CLI type '$result' for agent '$agent_id'. Falling back to 'claude'." >&2
-            echo "claude"
+            echo "[WARN] Invalid CLI type '$result' for agent '$agent_id'. Falling back to 'codex'." >&2
+            echo "codex"
         else
             echo "$result"
         fi
@@ -141,14 +138,6 @@ build_cli_command() {
     fi
 
     case "$cli_type" in
-        claude)
-            local cmd="claude"
-            if [[ -n "$model" ]]; then
-                cmd="$cmd --model $model"
-            fi
-            cmd="$cmd --dangerously-skip-permissions"
-            echo "${prefix}${cmd}"
-            ;;
         codex)
             local cmd="codex"
             if [[ -n "$model" ]]; then
@@ -157,18 +146,16 @@ build_cli_command() {
             cmd="$cmd --search --dangerously-bypass-approvals-and-sandbox --no-alt-screen"
             echo "$cmd"
             ;;
-        copilot)
-            echo "copilot --yolo"
-            ;;
-        kimi)
-            local cmd="kimi --yolo"
+        claude)
+            local cmd="claude"
             if [[ -n "$model" ]]; then
                 cmd="$cmd --model $model"
             fi
-            echo "$cmd"
+            cmd="$cmd --dangerously-skip-permissions"
+            echo "${prefix}${cmd}"
             ;;
         *)
-            echo "claude --dangerously-skip-permissions"
+            echo "codex --search --dangerously-bypass-approvals-and-sandbox --no-alt-screen"
             ;;
     esac
 }
@@ -192,11 +179,9 @@ get_instruction_file() {
     esac
 
     case "$cli_type" in
+        codex)   echo "instructions/generated/codex-${role}.md" ;;
         claude)  echo "instructions/${role}.md" ;;
-        codex)   echo "instructions/codex-${role}.md" ;;
-        copilot) echo ".github/copilot-instructions-${role}.md" ;;
-        kimi)    echo "instructions/generated/kimi-${role}.md" ;;
-        *)       echo "instructions/${role}.md" ;;
+        *)       echo "instructions/generated/codex-${role}.md" ;;
     esac
 }
 
@@ -206,29 +191,17 @@ get_instruction_file() {
 validate_cli_availability() {
     local cli_type="$1"
     case "$cli_type" in
+        codex)
+            command -v codex &>/dev/null || {
+                echo "[ERROR] Codex CLI not found. Install with: npm install -g @openai/codex" >&2
+                return 1
+            }
+            ;;
         claude)
             command -v claude &>/dev/null || {
                 echo "[ERROR] Claude Code CLI not found. Install from https://claude.ai/download" >&2
                 return 1
             }
-            ;;
-        codex)
-            command -v codex &>/dev/null || {
-                echo "[ERROR] OpenAI Codex CLI not found. Install with: npm install -g @openai/codex" >&2
-                return 1
-            }
-            ;;
-        copilot)
-            command -v copilot &>/dev/null || {
-                echo "[ERROR] GitHub Copilot CLI not found. Install with: brew install copilot-cli" >&2
-                return 1
-            }
-            ;;
-        kimi)
-            if ! command -v kimi-cli &>/dev/null && ! command -v kimi &>/dev/null; then
-                echo "[ERROR] Kimi CLI not found. Install from https://platform.moonshot.cn/" >&2
-                return 1
-            fi
             ;;
         *)
             echo "[ERROR] Unknown CLI type: '$cli_type'. Allowed: $CLI_ADAPTER_ALLOWED_CLIS" >&2
@@ -265,25 +238,13 @@ get_agent_model() {
     local cli_type
     cli_type=$(get_cli_type "$agent_id")
 
-    case "$cli_type" in
-        kimi)
-            # Kimi CLI用デフォルトモデル
-            case "$agent_id" in
-                shogun|karo)    echo "k2.5" ;;
-                ashigaru*)      echo "k2.5" ;;
-                *)              echo "k2.5" ;;
-            esac
-            ;;
-        *)
-            # Claude Code/Codex/Copilot用デフォルトモデル
-            case "$agent_id" in
-                shogun)         echo "opus" ;;
-                karo)           echo "sonnet" ;;
-                gunshi)         echo "opus" ;;
-                ashigaru*)      echo "sonnet" ;;
-                *)              echo "sonnet" ;;
-            esac
-            ;;
+    # デフォルトモデル（settings.yamlに明示指定がない場合）
+    case "$agent_id" in
+        shogun)         echo "o3" ;;
+        karo)           echo "o3" ;;
+        gunshi)         echo "o3" ;;
+        ashigaru*)      echo "o3" ;;
+        *)              echo "o3" ;;
     esac
 }
 
@@ -305,19 +266,12 @@ get_model_display_name() {
     case "$model" in
         *spark*)                short="Spark" ;;
         *codex*|gpt-5.3)        short="Codex" ;;
+        *o3*)                   short="o3" ;;
+        *o4-mini*)              short="o4m" ;;
         *opus*)                 short="Opus" ;;
         *sonnet*)               short="Sonnet" ;;
         *haiku*)                short="Haiku" ;;
-        *k2.5*|*kimi*)          short="Kimi" ;;
-        *)
-            # CLI種別から推測
-            case "$cli_type" in
-                codex)   short="Codex" ;;
-                copilot) short="Copilot" ;;
-                kimi)    short="Kimi" ;;
-                *)       short="$model" ;;
-            esac
-            ;;
+        *)                      short="$model" ;;
     esac
 
     # Thinking表示: 明示的に設定されている場合のみ "+T" を付与
@@ -635,10 +589,8 @@ can_model_switch() {
     local cli_type="$1"
 
     case "$cli_type" in
-        claude)  echo "full" ;;
         codex)   echo "limited" ;;
-        copilot) echo "none" ;;
-        kimi)    echo "none" ;;
+        claude)  echo "full" ;;
         *)       echo "none" ;;
     esac
 }

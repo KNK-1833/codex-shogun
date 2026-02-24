@@ -399,118 +399,40 @@ else
 fi
 
 # ============================================================
-# STEP 5: Claude Code CLI チェック（ネイティブ版）
-# ※ npm版は公式非推奨（deprecated）。ネイティブ版を使用する。
-#    Node.jsはMCPサーバー（npx経由）で引き続き必要。
+# STEP 5: Codex CLI チェック
 # ============================================================
-log_step "STEP 5: Claude Code CLI チェック"
+log_step "STEP 5: Codex CLI チェック"
 
-# ネイティブ版の既存インストールを検出するため、PATHに ~/.local/bin を含める
-export PATH="$HOME/.local/bin:$PATH"
-
-NEED_CLAUDE_INSTALL=false
-HAS_NPM_CLAUDE=false
-
-if command -v claude &> /dev/null; then
-    # claude コマンドは存在する → 実際に動くかチェック
-    CLAUDE_VERSION=$(claude --version 2>&1)
-    CLAUDE_PATH=$(which claude 2>/dev/null)
-
-    if [ $? -eq 0 ] && [ "$CLAUDE_VERSION" != "unknown" ] && [[ "$CLAUDE_VERSION" != *"not found"* ]]; then
-        # 動作する claude が見つかった → npm版かネイティブ版かを判定
-        if echo "$CLAUDE_PATH" | grep -qi "npm\|node_modules\|AppData"; then
-            # npm版が動いている
-            HAS_NPM_CLAUDE=true
-            log_warn "npm版 Claude Code CLI が検出されました（公式非推奨）"
-            log_info "検出パス: $CLAUDE_PATH"
-            log_info "バージョン: $CLAUDE_VERSION"
-            echo ""
-            echo "  npm版は公式で非推奨（deprecated）となっています。"
-            echo "  ネイティブ版をインストールし、npm版はアンインストールすることを推奨します。"
-            echo ""
-            if [ ! -t 0 ]; then
-                REPLY="Y"
-            else
-                read -p "  ネイティブ版をインストールしますか? [Y/n]: " REPLY
-            fi
-            REPLY=${REPLY:-Y}
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                NEED_CLAUDE_INSTALL=true
-                # npm版のアンインストール案内
-                echo ""
-                log_info "先にnpm版をアンインストールしてください:"
-                if echo "$CLAUDE_PATH" | grep -qi "mnt/c\|AppData"; then
-                    echo "  Windows の PowerShell で:"
-                    echo "    npm uninstall -g @anthropic-ai/claude-code"
-                else
-                    echo "    npm uninstall -g @anthropic-ai/claude-code"
-                fi
-                echo ""
-            else
-                log_warn "ネイティブ版への移行をスキップしました（npm版で続行）"
-                RESULTS+=("Claude Code CLI: OK (npm版・移行推奨)")
-            fi
-        else
-            # ネイティブ版が正常に動作している
-            log_success "Claude Code CLI がインストール済みです（ネイティブ版）"
-            log_info "バージョン: $CLAUDE_VERSION"
-            RESULTS+=("Claude Code CLI: OK")
-        fi
-    else
-        # command -v で見つかるが動かない（npm版でNode.js無し等）
-        log_warn "Claude Code CLI が見つかりましたが正常に動作しません"
-        log_info "検出パス: $CLAUDE_PATH"
-        if echo "$CLAUDE_PATH" | grep -qi "npm\|node_modules\|AppData"; then
-            HAS_NPM_CLAUDE=true
-            log_info "→ npm版（Node.js依存）が検出されました"
-        else
-            log_info "→ バージョン取得に失敗しました"
-        fi
-        NEED_CLAUDE_INSTALL=true
-    fi
+if command -v codex &> /dev/null; then
+    CODEX_VERSION=$(codex --version 2>&1 || echo "unknown")
+    log_success "Codex CLI がインストール済みです"
+    log_info "バージョン: $CODEX_VERSION"
+    RESULTS+=("Codex CLI: OK ($CODEX_VERSION)")
 else
-    # claude コマンドが見つからない
-    NEED_CLAUDE_INSTALL=true
-fi
+    log_warn "Codex CLI がインストールされていません"
+    echo ""
 
-if [ "$NEED_CLAUDE_INSTALL" = true ]; then
-    log_info "ネイティブ版 Claude Code CLI をインストールします"
-    log_info "Claude Code CLI をインストール中（ネイティブ版）..."
-    curl -fsSL https://claude.ai/install.sh | bash
-
-    # PATHを更新（インストール直後は反映されていない可能性）
-    export PATH="$HOME/.local/bin:$PATH"
-
-    # .bashrc に永続化（重複追加を防止）
-    if ! grep -q 'export PATH="\$HOME/.local/bin:\$PATH"' "$HOME/.bashrc" 2>/dev/null; then
-        echo '' >> "$HOME/.bashrc"
-        echo '# Claude Code CLI PATH (added by first_setup.sh)' >> "$HOME/.bashrc"
-        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-        log_info "~/.local/bin を ~/.bashrc の PATH に追加しました"
-    fi
-
-    if command -v claude &> /dev/null; then
-        CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "unknown")
-        log_success "Claude Code CLI インストール完了（ネイティブ版）"
-        log_info "バージョン: $CLAUDE_VERSION"
-        RESULTS+=("Claude Code CLI: インストール完了")
-
-        # npm版が残っている場合の案内
-        if [ "$HAS_NPM_CLAUDE" = true ]; then
+    if command -v npm &> /dev/null; then
+        log_info "Codex CLI をインストール中..."
+        if npm install -g @openai/codex 2>/dev/null; then
+            CODEX_VERSION=$(codex --version 2>&1 || echo "unknown")
+            log_success "Codex CLI インストール完了"
+            log_info "バージョン: $CODEX_VERSION"
+            RESULTS+=("Codex CLI: インストール完了 ($CODEX_VERSION)")
+        else
+            log_error "Codex CLI のインストールに失敗しました"
             echo ""
-            log_info "ネイティブ版がPATHで優先されるため、npm版は無効化されます"
-            log_info "npm版を完全に削除するには以下を実行してください:"
-            if echo "$CLAUDE_PATH" | grep -qi "mnt/c\|AppData"; then
-                echo "  Windows の PowerShell で:"
-                echo "    npm uninstall -g @anthropic-ai/claude-code"
-            else
-                echo "    npm uninstall -g @anthropic-ai/claude-code"
-            fi
+            echo "  手動でインストールしてください:"
+            echo "    npm install -g @openai/codex"
+            RESULTS+=("Codex CLI: インストール失敗")
+            HAS_ERROR=true
         fi
     else
-        log_error "インストールに失敗しました。パスを確認してください"
-        log_info "~/.local/bin がPATHに含まれているか確認してください"
-        RESULTS+=("Claude Code CLI: インストール失敗")
+        log_error "npm が必要です。先にNode.jsをインストールしてください"
+        echo ""
+        echo "  手動でインストールしてください:"
+        echo "    npm install -g @openai/codex"
+        RESULTS+=("Codex CLI: 未インストール (npm不在)")
         HAS_ERROR=true
     fi
 fi
@@ -524,13 +446,14 @@ log_step "STEP 6: ディレクトリ構造作成"
 DIRECTORIES=(
     "queue/tasks"
     "queue/reports"
+    "queue/inbox"
+    "queue/metrics"
     "config"
+    "context"
     "status"
     "instructions"
     "logs"
-    "demo_output"
     "skills"
-    "memory"
 )
 
 CREATED_COUNT=0
@@ -579,9 +502,6 @@ shell: bash
 
 # スキル設定
 skill:
-  # スキル保存先（スキル名に shogun- プレフィックスを付けて保存）
-  save_path: "~/.claude/skills/"
-
   # ローカルスキル保存先（このプロジェクト専用）
   local_path: "$SCRIPT_DIR/skills/"
 
@@ -611,27 +531,6 @@ EOF
     log_success "projects.yaml を作成しました"
 else
     log_info "config/projects.yaml は既に存在します"
-fi
-
-# memory/global_context.md（システム全体のコンテキスト）
-if [ ! -f "$SCRIPT_DIR/memory/global_context.md" ]; then
-    log_info "memory/global_context.md を作成中..."
-    cat > "$SCRIPT_DIR/memory/global_context.md" << 'EOF'
-# グローバルコンテキスト
-最終更新: (未設定)
-
-## システム方針
-- (殿の好み・方針をここに記載)
-
-## プロジェクト横断の決定事項
-- (複数プロジェクトに影響する決定をここに記載)
-
-## 注意事項
-- (全エージェントが知るべき注意点をここに記載)
-EOF
-    log_success "global_context.md を作成しました"
-else
-    log_info "memory/global_context.md は既に存在します"
 fi
 
 RESULTS+=("設定ファイル: OK")
@@ -843,33 +742,6 @@ else
 fi
 
 # ============================================================
-# STEP 11: Memory MCP セットアップ
-# ============================================================
-log_step "STEP 11: Memory MCP セットアップ"
-
-if command -v claude &> /dev/null; then
-    # Memory MCP が既に設定済みか確認
-    if claude mcp list 2>/dev/null | grep -q "memory"; then
-        log_info "Memory MCP は既に設定済みです"
-        RESULTS+=("Memory MCP: OK (設定済み)")
-    else
-        log_info "Memory MCP を設定中..."
-        if claude mcp add memory \
-            -e MEMORY_FILE_PATH="$SCRIPT_DIR/memory/shogun_memory.jsonl" \
-            -- npx -y @modelcontextprotocol/server-memory 2>/dev/null; then
-            log_success "Memory MCP 設定完了"
-            RESULTS+=("Memory MCP: 設定完了")
-        else
-            log_warn "Memory MCP の設定に失敗しました（手動で設定可能）"
-            RESULTS+=("Memory MCP: 設定失敗 (手動設定可能)")
-        fi
-    fi
-else
-    log_warn "claude コマンドが見つからないため Memory MCP 設定をスキップ"
-    RESULTS+=("Memory MCP: スキップ (claude未インストール)")
-fi
-
-# ============================================================
 # 結果サマリー
 # ============================================================
 echo ""
@@ -913,17 +785,16 @@ echo ""
 echo "  STEP 0: PATHの反映（このシェルにインストール結果を反映）"
 echo "     source ~/.bashrc"
 echo ""
-echo "  STEP A: OAuth認証 + Bypass Permissions の承認（1コマンドで完了）"
-echo "     claude --dangerously-skip-permissions"
+echo "  STEP A: OpenAI認証 + Bypass Approvals の承認（1コマンドで完了）"
+echo "     codex --dangerously-bypass-approvals-and-sandbox"
 echo ""
-echo "     1. ブラウザが開く → Anthropicアカウントでログイン → CLIに戻る"
-echo "        ※ WSLでブラウザが開かない場合は、表示されるURLをWindows側の"
-echo "          ブラウザに手動で貼り付けてください"
-echo "     2. Bypass Permissions の承認画面が表示される"
-echo "        → 「Yes, I accept」を選択（↓キーで2を選んでEnter）"
+echo "     1. OpenAI APIキーの設定を求められる場合:"
+echo "        → OPENAI_API_KEY 環境変数をセットするか、~/.codex/config.toml に記載"
+echo "     2. Bypass Approvals の承認画面が表示される"
+echo "        → 承認して続行"
 echo "     3. /exit で退出"
 echo ""
-echo "     ※ 一度承認すれば ~/.claude/ に保存され、以降は不要です"
+echo "     ※ 一度承認すれば ~/.codex/ に保存され、以降は不要です"
 echo ""
 echo "  ────────────────────────────────────────────────────────────────"
 echo ""
@@ -931,7 +802,7 @@ echo "  出陣（全エージェント起動）:"
 echo "     ./shutsujin_departure.sh"
 echo ""
 echo "  オプション:"
-echo "     ./shutsujin_departure.sh -s            # セットアップのみ（Claude手動起動）"
+echo "     ./shutsujin_departure.sh -s            # セットアップのみ（Codex手動起動）"
 echo "     ./shutsujin_departure.sh -t            # Windows Terminalタブ展開"
 echo "     ./shutsujin_departure.sh -shell bash   # bash用プロンプトで起動"
 echo "     ./shutsujin_departure.sh -shell zsh    # zsh用プロンプトで起動"

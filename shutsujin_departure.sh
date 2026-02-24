@@ -634,7 +634,7 @@ log_success "  └─ 家老・足軽・軍師の陣、構築完了"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# STEP 6: Claude Code 起動（-s / --setup-only のときはスキップ）
+# STEP 6: CLI 起動（-s / --setup-only のときはスキップ）
 # ═══════════════════════════════════════════════════════════════════════════════
 if [ "$SETUP_ONLY" = false ]; then
     # CLI の存在チェック（Multi-CLI対応）
@@ -652,11 +652,11 @@ if [ "$SETUP_ONLY" = false ]; then
         fi
     fi
 
-    log_war "👑 全軍に Claude Code を召喚中..."
+    log_war "👑 全軍に Codex CLI を召喚中..."
 
     # 将軍: CLI Adapter経由でコマンド構築
-    _shogun_cli_type="claude"
-    _shogun_cmd="claude --model opus --dangerously-skip-permissions"
+    _shogun_cli_type="codex"
+    _shogun_cmd="codex --model o3 --search --dangerously-bypass-approvals-and-sandbox --no-alt-screen"
     if [ "$CLI_ADAPTER_LOADED" = true ]; then
         _shogun_cli_type=$(get_cli_type "shogun")
         _shogun_cmd=$(build_cli_command "shogun")
@@ -847,12 +847,12 @@ NINJA_EOF
     echo -e "                               \033[0;36m[ASCII Art: syntax-samurai/ryu - CC0 1.0 Public Domain]\033[0m"
     echo ""
 
-    echo "  Claude Code の起動を待機中（最大30秒）..."
+    echo "  Codex CLI の起動を待機中（最大30秒）..."
 
     # 将軍の起動を確認（最大30秒待機）
     for i in {1..30}; do
-        if tmux capture-pane -t shogun:main -p | grep -q "bypass permissions"; then
-            echo "  └─ 将軍の Claude Code 起動確認完了（${i}秒）"
+        if tmux capture-pane -t shogun:main -p | grep -qE "(bypass|shortcuts|context left)"; then
+            echo "  └─ 将軍の Codex CLI 起動確認完了（${i}秒）"
             break
         fi
         sleep 1
@@ -1025,9 +1025,9 @@ echo "  ╚═══════════════════════
 echo ""
 
 if [ "$SETUP_ONLY" = true ]; then
-    echo "  ⚠️  セットアップのみモード: Claude Codeは未起動です"
+    echo "  ⚠️  セットアップのみモード: Codex CLIは未起動です"
     echo ""
-    echo "  手動でClaude Codeを起動するには:"
+    echo "  手動でCodex CLIを起動するには:"
     echo "  ┌──────────────────────────────────────────────────────────┐"
     echo "  │  # 将軍を召喚                                            │"
     echo "  │  tmux send-keys -t shogun:main \\                         │"

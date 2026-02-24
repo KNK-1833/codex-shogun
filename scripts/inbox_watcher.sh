@@ -30,7 +30,7 @@ if [ "${__INBOX_WATCHER_TESTING__:-}" != "1" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
     AGENT_ID="$1"
     PANE_TARGET="$2"
-    CLI_TYPE="${3:-claude}"  # CLI種別（claude/codex/copilot）。未指定→claude（後方互換）
+    CLI_TYPE="${3:-codex}"  # CLI種別（codex/claude）。未指定→codex
 
     INBOX="$SCRIPT_DIR/queue/inbox/${AGENT_ID}.yaml"
     LOCKFILE="${INBOX}.lock"
@@ -218,7 +218,7 @@ should_throttle_nudge() {
 
 is_valid_cli_type() {
     case "${1:-}" in
-        claude|codex|copilot|kimi) return 0 ;;
+        codex|claude) return 0 ;;
         *) return 1 ;;
     esac
 }
@@ -494,23 +494,6 @@ send_cli_command() {
                 return 0
             fi
             ;;
-        copilot)
-            # Copilot: /clearはCtrl-C+再起動, /model非対応→スキップ
-            if [[ "$cmd" == "/clear" ]]; then
-                echo "[$(date)] [SEND-KEYS] Copilot /clear: sending Ctrl-C + restart for $AGENT_ID" >&2
-                timeout 5 tmux send-keys -t "$PANE_TARGET" C-c 2>/dev/null || true
-                sleep 2
-                timeout 5 tmux send-keys -t "$PANE_TARGET" "copilot --yolo" 2>/dev/null || true
-                sleep 0.3
-                timeout 5 tmux send-keys -t "$PANE_TARGET" Enter 2>/dev/null || true
-                sleep 3
-                return 0
-            fi
-            if [[ "$cmd" == /model* ]]; then
-                echo "[$(date)] Skipping $cmd (not supported on copilot)" >&2
-                return 0
-            fi
-            ;;
         # claude: commands pass through as-is
     esac
 
@@ -577,7 +560,7 @@ send_codex_startup_prompt() {
 # Called when task_assigned is detected in unread messages.
 # Sends the appropriate "new conversation" command per CLI type to clear
 # stale context from the previous task.
-# CLI mapping: claude→/clear, codex→/new, copilot→/clear, kimi→/clear
+# CLI mapping: codex→/new, claude→/clear
 send_context_reset() {
     local effective_cli
     effective_cli=$(get_effective_cli_type)
@@ -595,8 +578,6 @@ send_context_reset() {
     case "$effective_cli" in
         codex)    reset_cmd="/new" ;;
         claude)   reset_cmd="/clear" ;;
-        copilot)  reset_cmd="/clear" ;;
-        kimi)     reset_cmd="/clear" ;;
         *)        reset_cmd="/new" ;;  # safe default (codex-safe)
     esac
 
