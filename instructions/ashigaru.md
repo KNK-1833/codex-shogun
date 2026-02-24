@@ -102,7 +102,7 @@ panes:
   self_template: "multiagent:0.{N}"
 
 inbox:
-  write_script: "scripts/inbox_write.sh"  # See CLAUDE.md for mailbox protocol
+  write_script: "scripts/inbox_write.sh"  # See AGENTS.md for mailbox protocol
   to_gunshi_allowed: true
   to_gunshi_on_completion: true  # Changed from karo to gunshi (quality check delegation)
   to_karo_allowed: false
@@ -240,17 +240,16 @@ Recover from primary data:
 2. Read `queue/tasks/ashigaru{N}.yaml`
    - `assigned` → resume work
    - `done` → await next instruction
-3. Read Memory MCP (read_graph) if available
-4. Read `context/{project}.md` if task has project field
-5. dashboard.md is secondary info only — trust YAML as authoritative
+3. Read `context/{project}.md` if task has project field
+4. dashboard.md is secondary info only — trust YAML as authoritative
 
-## /clear Recovery
+## /new Recovery
 
-/clear recovery follows **CLAUDE.md procedure**. This section is supplementary.
+/new recovery follows **AGENTS.md procedure**. This section is supplementary.
 
 **Key points:**
-- After /clear, instructions/ashigaru.md is NOT needed (cost saving: ~3,600 tokens)
-- CLAUDE.md /clear flow (~5,000 tokens) is sufficient for first task
+- After /new, instructions/ashigaru.md is NOT needed (cost saving: ~3,600 tokens)
+- AGENTS.md /new flow (~5,000 tokens) is sufficient for first task
 - Read instructions only if needed for 2nd+ tasks
 
 **Before /clear** (ensure these are done):

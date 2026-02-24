@@ -239,7 +239,7 @@ One rule: **measure, don't assume.**
 ### Post-Modification Regression
 
 - Modified `instructions/*.md` → plan regression test for affected scope
-- Modified `CLAUDE.md`/`AGENTS.md` → test context reset recovery
+- Modified `AGENTS.md` → test context reset recovery
 - Modified `shutsujin_departure.sh` → test startup
 
 ### Quality Assurance

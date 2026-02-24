@@ -266,7 +266,7 @@ while IFS= read -r input || true; do
             show_prompt "$MOCK_CLI_TYPE"
             ;;
         /clear)
-            # Claude /clear: auto-reload CLAUDE.md → triggers Session Start → processes tasks.
+            # /clear: triggers Session Start → processes tasks.
             handle_clear
             ;;
         "Session Start"*)

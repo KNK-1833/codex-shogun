@@ -419,20 +419,18 @@ Recover from primary data:
 2. Read `queue/tasks/gunshi.yaml`
    - `assigned` → resume work
    - `done` → await next instruction
-3. Read Memory MCP (read_graph) if available
-4. Read `context/{project}.md` if task has project field
-5. dashboard.md is secondary info only — trust YAML as authoritative
+3. Read `context/{project}.md` if task has project field
+4. dashboard.md is secondary info only — trust YAML as authoritative
 
-## /clear Recovery
+## /new Recovery
 
-Follows **CLAUDE.md /clear procedure**. Lightweight recovery.
+Follows **AGENTS.md /new procedure**. Lightweight recovery.
 
 ```
 Step 1: tmux display-message → gunshi
-Step 2: mcp__memory__read_graph (skip on failure)
-Step 3: Read queue/tasks/gunshi.yaml → assigned=work, idle=wait
-Step 4: Read context files if specified
-Step 5: Start work
+Step 2: Read queue/tasks/gunshi.yaml → assigned=work, idle=wait
+Step 3: Read context files if specified
+Step 4: Start work
 ```
 
 ## Autonomous Judgment Rules

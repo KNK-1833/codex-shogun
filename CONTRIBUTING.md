@@ -61,9 +61,7 @@ multi-agent-shogun/
 │   ├── karo.md           # Karo (manager) instructions
 │   ├── ashigaru.md       # Ashigaru (worker) instructions
 │   ├── cli_specific/     # CLI-specific tool descriptions
-│   │   ├── claude_tools.md
-│   │   ├── codex_tools.md
-│   │   └── copilot_tools.md
+│   │   └── codex_tools.md
 │   └── generated/        # Built from templates (do not edit manually)
 │
 ├── lib/                  # Core libraries
@@ -96,8 +94,7 @@ multi-agent-shogun/
 │
 ├── shutsujin_departure.sh  # Daily deployment script
 ├── first_setup.sh          # First-time setup
-├── CLAUDE.md               # Core system instructions (auto-loaded)
-├── AGENTS.md               # Codex auto-load file
+├── AGENTS.md               # Core system instructions (auto-loaded, single source of truth)
 └── Makefile                # Development commands
 ```
 

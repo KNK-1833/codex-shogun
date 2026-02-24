@@ -491,7 +491,7 @@ git diff --exit-code instructions/generated/
 |----|--------|---------|--------|
 | F004 | Polling/wait loops | Event-driven (inbox) | Wastes API credits |
 | F005 | Skip context reading | Always read first | Prevents errors |
-| F006 | Edit generated files directly (`instructions/generated/*.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `agents/default/system.md`) | Edit source templates (`CLAUDE.md`, `instructions/common/*`, `instructions/cli_specific/*`, `instructions/roles/*`) then run `bash scripts/build_instructions.sh` | CI "Build Instructions Check" fails when generated files drift from templates |
+| F006 | Edit generated files directly (`instructions/generated/*.md`) | Edit source templates (`AGENTS.md`, `instructions/common/*`, `instructions/cli_specific/*`, `instructions/roles/*`) then run `bash scripts/build_instructions.sh` | Generated files drift from templates |
 | F007 | `git push` without the Lord's explicit approval | Ask the Lord first | Prevents leaking secrets / unreviewed changes |
 
 ## Shogun Forbidden Actions
@@ -614,11 +614,12 @@ Set `CODEX_HOME` env var for project-specific automation profiles.
 
 Sessions are stored locally. Use `/resume` or `codex exec resume` to continue previous conversations.
 
-### No Memory MCP equivalent
+### Persistence Strategy
 
-Codex does not have a built-in persistent memory system like Claude Code's Memory MCP. For cross-session knowledge, rely on:
-- AGENTS.md (project-level instructions)
+For cross-session knowledge, rely on file-based persistence:
+- AGENTS.md (project-level instructions — single source of truth)
 - File-based state (queue/tasks/*.yaml, queue/reports/*.yaml)
+- Config files (config/settings.yaml, context/*.md)
 - MCP servers if configured
 
 ## Codex-Specific Commands (Slash Commands)
@@ -673,7 +674,7 @@ Step 3: If task has "target_path:" → read that file
 Step 4: Resume work based on task status
 ```
 
-**Note**: Unlike Claude Code, Codex has no `mcp__memory__read_graph` equivalent. Recovery relies entirely on AGENTS.md + YAML files.
+**Note**: Recovery relies entirely on AGENTS.md + YAML files (file-based persistence).
 
 ## tmux Interaction
 
@@ -756,17 +757,16 @@ Use `/model` to switch models during a session (includes reasoning effort settin
 
 Model is set by `build_cli_command()` in cli_adapter.sh based on settings.yaml. Karo cannot dynamically switch Codex models via inbox (no `/model` send-keys equivalent in exec mode).
 
-## Limitations (vs Claude Code)
+## Codex CLI Limitations
 
-| Feature | Claude Code | Codex CLI | Impact |
-|---------|------------|-----------|--------|
-| Memory MCP | Built-in | Not built-in (configurable) | Recovery relies on AGENTS.md + files |
-| Task tool (subagents) | Yes | No | Cannot spawn sub-agents |
-| Skill system | Yes | No | No slash command skills |
-| Dynamic model switch | `/model` via send-keys | `/model` in TUI only | Limited in automated mode |
-| `/clear` context reset | Yes | `/new` (TUI only) | Exec mode: new invocation |
-| Prompt caching | 90% discount | 75% discount | Higher cost per token |
-| Subscription limits | API-based (no limit) | msg/5h limits (Plus/Pro) | Bottleneck for parallel ops |
+| Feature | Status | Impact |
+|---------|--------|--------|
+| Task tool (subagents) | Not available | Cannot spawn sub-agents |
+| Skill system | Not available | No slash command skills |
+| Dynamic model switch | `/model` in TUI only | Limited in automated mode |
+| `/new` context reset | TUI only | Exec mode: new invocation |
+| Prompt caching | 75% discount | Cost consideration for parallel ops |
+| Subscription limits | msg/5h limits (Plus/Pro) | Bottleneck for parallel ops |
 | Alt-screen | No (terminal-native) | Yes (TUI, unless `--no-alt-screen`) | tmux integration risk |
 | Sandbox | None built-in | OS-level (landlock/seatbelt) | Safer automated execution |
 | Structured output | Text only | JSONL (`--json`) | Better for parsing |

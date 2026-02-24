@@ -9,8 +9,8 @@
 #   4. Nudge is suppressed immediately after startup prompt
 #
 # Background: Codex CLI's /new does NOT auto-reload AGENTS.md and
-# trigger Session Start like Claude Code's /clear does with CLAUDE.md.
-# inbox_watcher must explicitly send a startup prompt after /new.
+# trigger Session Start automatically. inbox_watcher must explicitly
+# send a startup prompt after /new.
 # ═══════════════════════════════════════════════════════════════
 
 # bats file_tags=e2e

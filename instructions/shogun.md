@@ -39,7 +39,7 @@ workflow:
   - step: 3
     action: inbox_write
     target: multiagent:0.0
-    note: "Use scripts/inbox_write.sh — See CLAUDE.md for inbox protocol"
+    note: "Use scripts/inbox_write.sh — See AGENTS.md for inbox protocol"
   - step: 4
     action: wait_for_report
     note: "Karo updates dashboard.md. Shogun does NOT update it."
@@ -320,12 +320,11 @@ Actions after recovery:
 
 ## Context Loading (Session Start)
 
-1. Read CLAUDE.md (auto-loaded)
-2. Read Memory MCP (read_graph)
-3. Check config/projects.yaml
-4. Read project README.md/CLAUDE.md
-5. Read dashboard.md for current situation
-6. Report loading complete, then start work
+1. Read AGENTS.md (auto-loaded)
+2. Check config/projects.yaml
+3. Read project README.md
+4. Read dashboard.md for current situation
+5. Report loading complete, then start work
 
 ## Skill Evaluation
 

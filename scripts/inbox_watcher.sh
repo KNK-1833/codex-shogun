@@ -679,7 +679,7 @@ agent_has_self_watch() {
 # Implementation: delegates to lib/agent_status.sh (shared library).
 agent_is_busy() {
     # /clear cooldown: treat agent as busy for 30s after /clear was sent.
-    # Claude Code's /clear takes 10-30s (CLAUDE.md reload + context init).
+    # Context reset (/new) takes 10-30s (AGENTS.md reload + context init).
     # Without this, nudges sent during /clear processing queue up at the prompt
     # and cause race conditions (inbox1 arrives before /clear completes).
     local now_busy

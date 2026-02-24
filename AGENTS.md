@@ -1,7 +1,7 @@
 ---
 # multi-agent-shogun System Configuration
 version: "3.0"
-updated: "2026-02-07"
+updated: "2026-02-24"
 description: "Codex CLI + tmux multi-agent parallel dev platform with sengoku military hierarchy"
 
 hierarchy: "Lord (human) → Shogun → Karo → Ashigaru 1-7 / Gunshi"
@@ -42,8 +42,8 @@ task_status_transitions:
 # - instructions/common/task_flow.md (Status Reference)
 # Do NOT invent new status values without updating that document.
 
-mcp_tools: [Notion, Playwright, GitHub, Sequential Thinking, Memory]
-mcp_usage: "Lazy-loaded. Always ToolSearch before first use."
+mcp_tools: [Notion, Playwright, GitHub, Sequential Thinking]
+mcp_usage: "Lazy-loaded. Always ToolSearch before first use. Memory MCP removed — use file-based persistence (config/, context/, queue/)."
 
 parallel_principle: "足軽は可能な限り並列投入。家老は統括専念。1人抱え込み禁止。"
 std_process: "Strategy→Spec→Test→Implement→Verify を全cmdの標準手順とする"
@@ -62,12 +62,11 @@ language:
 **This is ONE procedure for ALL situations**: fresh start, compaction, session continuation, or any state where you see AGENTS.md. You cannot distinguish these cases, and you don't need to. **Always follow the same steps.**
 
 1. Identify self: `tmux display-message -t "$TMUX_PANE" -p '#{@agent_id}'`
-2. `mcp__memory__read_graph` — restore rules, preferences, lessons **(shogun/karo/gunshi only. ashigaru skip this step — task YAML is sufficient)**
-3. **Read your instructions file**: shogun→`instructions/generated/codex-shogun.md`, karo→`instructions/generated/codex-karo.md`, ashigaru→`instructions/generated/codex-ashigaru.md`, gunshi→`instructions/generated/codex-gunshi.md`. **NEVER SKIP** — even if a conversation summary exists. Summaries do NOT preserve persona, speech style, or forbidden actions.
-4. Rebuild state from primary YAML data (queue/, tasks/, reports/)
-5. Review forbidden actions, then start work
+2. **Read your instructions file**: shogun→`instructions/generated/codex-shogun.md`, karo→`instructions/generated/codex-karo.md`, ashigaru→`instructions/generated/codex-ashigaru.md`, gunshi→`instructions/generated/codex-gunshi.md`. **NEVER SKIP** — even if a conversation summary exists. Summaries do NOT preserve persona, speech style, or forbidden actions.
+3. Rebuild state from primary YAML data (queue/, tasks/, reports/) + context files (config/, context/)
+4. Review forbidden actions, then start work
 
-**CRITICAL**: Steps 1-3を完了するまでinbox処理するな。`inboxN` nudgeが先に届いても無視し、自己識別→memory→instructions読み込みを必ず先に終わらせよ。Step 1をスキップすると自分の役割を誤認し、別エージェントのタスクを実行する事故が起きる（2026-02-13実例: 家老が足軽2と誤認）。
+**CRITICAL**: Steps 1-2を完了するまでinbox処理するな。`inboxN` nudgeが先に届いても無視し、自己識別→instructions読み込みを必ず先に終わらせよ。Step 1をスキップすると自分の役割を誤認し、別エージェントのタスクを実行する事故が起きる（2026-02-13実例: 家老が足軽2と誤認）。
 
 **CRITICAL**: dashboard.md is secondary data (karo's summary). Primary data = YAML files. Always verify from YAML.
 
@@ -77,14 +76,13 @@ Lightweight recovery using only AGENTS.md (auto-loaded). Do NOT read instruction
 
 ```
 Step 1: tmux display-message -t "$TMUX_PANE" -p '#{@agent_id}' → ashigaru{N} or gunshi
-Step 2: (gunshi only) mcp__memory__read_graph (skip on failure). Ashigaru skip — task YAML is sufficient.
-Step 3: Read queue/tasks/{your_id}.yaml → assigned=work, idle=wait
-Step 4: If task has "project:" field → read context/{project}.md
+Step 2: Read queue/tasks/{your_id}.yaml → assigned=work, idle=wait
+Step 3: If task has "project:" field → read context/{project}.md
         If task has "target_path:" → read that file
-Step 5: Start work
+Step 4: Start work
 ```
 
-**CRITICAL**: Steps 1-3を完了するまでinbox処理するな。`inboxN` nudgeが先に届いても無視し、自己識別を必ず先に終わらせよ。
+**CRITICAL**: Steps 1-2を完了するまでinbox処理するな。`inboxN` nudgeが先に届いても無視し、自己識別を必ず先に終わらせよ。
 
 Forbidden after /new: reading instructions/*.md (1st task), polling (F004), contacting humans directly (F002). Trust task YAML only — pre-/new memory is gone.
 
@@ -187,10 +185,9 @@ Race condition is eliminated: `/new` wipes old context. Agent re-reads YAML with
 # Context Layers
 
 ```
-Layer 1: Memory MCP     — persistent across sessions (preferences, rules, lessons)
-Layer 2: Project files   — persistent per-project (config/, projects/, context/)
-Layer 3: YAML Queue      — persistent task data (queue/ — authoritative source of truth)
-Layer 4: Session context — volatile (AGENTS.md auto-loaded, instructions/*.md, lost on /new)
+Layer 1: Project files   — persistent per-project (config/, projects/, context/)
+Layer 2: YAML Queue      — persistent task data (queue/ — authoritative source of truth)
+Layer 3: Session context — volatile (AGENTS.md auto-loaded, instructions/*.md, lost on /new)
 ```
 
 # Project Management

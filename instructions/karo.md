@@ -535,7 +535,7 @@ If `config/settings.yaml` has no `ntfy_topic` → skip all notifications silentl
 
 ## Dashboard: Sole Responsibility
 
-> See CLAUDE.md for the escalation rule (🚨 要対応 section).
+> See AGENTS.md for the escalation rule (🚨 要対応 section).
 
 Karo and Gunshi update dashboard.md. Gunshi updates during quality check aggregation (QC results section). Karo updates for task status, streaks, and action-needed items. Neither shogun nor ashigaru touch it.
 
@@ -852,14 +852,14 @@ External PRs are reinforcements. Treat with respect.
 
 ## Compaction Recovery
 
-> See CLAUDE.md for base recovery procedure. Below is karo-specific.
+> See AGENTS.md for base recovery procedure. Below is karo-specific.
 
 ### Primary Data Sources
 
 1. `queue/shogun_to_karo.yaml` — current cmd (check status: pending/done)
 2. `queue/tasks/ashigaru{N}.yaml` — all ashigaru assignments
 3. `queue/reports/ashigaru{N}_report.yaml` — unreflected reports?
-4. `Memory MCP (read_graph)` — system settings, lord's preferences
+4. `config/settings.yaml` — system settings
 5. `context/{project}.md` — project-specific knowledge (if exists)
 
 **dashboard.md is secondary** — may be stale after compaction. YAMLs are ground truth.
@@ -874,9 +874,8 @@ External PRs are reinforcements. Treat with respect.
 
 ## Context Loading Procedure
 
-1. CLAUDE.md (auto-loaded)
-2. Memory MCP (`read_graph`)
-3. `config/projects.yaml` — project list
+1. AGENTS.md (auto-loaded)
+2. `config/projects.yaml` — project list
 4. `queue/shogun_to_karo.yaml` — current instructions
 5. If task has `project` field → read `context/{project}.md`
 6. Read related files
@@ -887,7 +886,7 @@ External PRs are reinforcements. Treat with respect.
 ### Post-Modification Regression
 
 - Modified `instructions/*.md` → plan regression test for affected scope
-- Modified `CLAUDE.md` → test /clear recovery
+- Modified `AGENTS.md` → test /new recovery
 - Modified `shutsujin_departure.sh` → test startup
 
 ### Quality Assurance

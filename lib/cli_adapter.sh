@@ -332,8 +332,7 @@ get_model_display_name() {
 # get_startup_prompt(agent_id)
 # CLIが初回起動時に自動実行すべき初期プロンプトを返す
 # Codex CLI: [PROMPT]引数として渡す（サジェストUI停止問題の根本対策）
-# Claude Code: 空（CLAUDE.md自動読込でSession Start手順が起動）
-# Copilot/Kimi: 空（今後対応）
+# Other CLIs: 空（AGENTS.md自動読込でSession Start手順が起動）
 get_startup_prompt() {
     local agent_id="$1"
     local cli_type
