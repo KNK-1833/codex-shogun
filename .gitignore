@@ -9,6 +9,9 @@
 # Step 2: ディレクトリの探索を許可（中身は個別に許可）
 !*/
 
+# Step 2.1: 除外すべきディレクトリ（venv等）
+.venv/
+
 # Step 3: OSS公開対象ファイルを許可
 !.gitignore
 !.gitattributes
