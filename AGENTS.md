@@ -43,7 +43,7 @@ task_status_transitions:
 # Do NOT invent new status values without updating that document.
 
 mcp_tools: [Notion, Playwright, GitHub, Sequential Thinking]
-mcp_usage: "Lazy-loaded. Always ToolSearch before first use. Memory MCP removed — use file-based persistence (config/, context/, queue/)."
+mcp_usage: "Lazy-loaded. Always ToolSearch before first use. Use file-based persistence (config/, context/, queue/)."
 
 parallel_principle: "足軽は可能な限り並列投入。家老は統括専念。1人抱え込み禁止。"
 std_process: "Strategy→Spec→Test→Implement→Verify を全cmdの標準手順とする"

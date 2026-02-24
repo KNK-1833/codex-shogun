@@ -18,7 +18,7 @@ Search for evidence before making decisions. Agents don't rely solely on their t
 
 ### 4. Continuous Learning
 
-Don't rely solely on model knowledge cutoffs. The system uses Memory MCP to persist lessons learned, discovered patterns, and operational insights across sessions. When an agent encounters a problem it has solved before, it checks memory first. When it learns something new, it records it for future reference.
+Don't rely solely on model knowledge cutoffs. The system uses file-based persistence (`config/`, `context/`, `queue/`) to store lessons learned, discovered patterns, and operational insights across sessions. When an agent encounters a problem it has solved before, it checks existing context files first. When it learns something new, it records it for future reference.
 
 ### 5. Triangulation
 

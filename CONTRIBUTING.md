@@ -145,7 +145,7 @@ The following are intentionally excluded (do NOT whitelist these):
 
 - `projects/` — Contains confidential client information
 - `queue/` — Runtime data, generated dynamically
-- `memory/` — User-specific persistent memory
+- `projects/` subdirectory secrets — User-specific project details
 - `.claude/commands/` — User-specific skills (not committed)
 - `saytask/streaks.yaml` — User-specific task data
 
@@ -271,7 +271,7 @@ make install-deps
 # Run unit tests
 make test
 
-# Run integration tests (Claude Code only)
+# Run integration tests
 make test-int
 
 # Run shellcheck linter
@@ -429,7 +429,7 @@ What actually happened.
 
 **Environment**
 - OS: [e.g., WSL2 Ubuntu 22.04]
-- Claude Code version: [e.g., 1.2.3]
+- CLI version: [e.g., Codex 0.1.x / Claude Code 1.x.x]
 - Shell: [e.g., bash 5.1]
 
 **Additional context**

@@ -21,7 +21,7 @@ This project uses a **whitelist-based .gitignore** strategy to prevent accidenta
 
 - Default `*` excludes everything
 - Only explicitly allowed files are tracked
-- `projects/`, `queue/`, and `memory/` are intentionally excluded
+- `projects/` and `queue/` are intentionally excluded
 
 **Always verify what you're committing**:
 ```bash
@@ -73,14 +73,14 @@ The `projects/` directory is excluded from git by design:
 
 **If you need to share project structure examples**, create sanitized templates in `templates/` instead.
 
-### 5. Memory MCP Data
+### 5. File-Based Persistence Data
 
-The `memory/` directory contains user-specific persistent memory:
-- Personal preferences
-- Project history
-- Learned patterns
+The `config/`, `context/`, and `queue/` directories contain operational data:
+- Project configuration and preferences
+- Agent context and notes
+- Task queues and reports
 
-This data is **excluded from git** to protect user privacy. Never commit `memory/*.jsonl` files.
+Sensitive data in `projects/` and `queue/` is **excluded from git** to protect user privacy.
 
 ### 6. Shell Script Injection
 
@@ -137,7 +137,7 @@ When reporting a vulnerability, please include:
 - **Description**: Clear summary of the vulnerability
 - **Impact**: What could an attacker do with this vulnerability?
 - **Steps to Reproduce**: Detailed steps to reproduce the issue
-- **Environment**: OS, shell version, Claude Code version, etc.
+- **Environment**: OS, shell version, CLI version (Codex/Claude Code), etc.
 - **Proof of Concept**: Code or screenshots demonstrating the issue (if applicable)
 - **Suggested Fix**: If you have ideas for how to fix it (optional)
 
@@ -160,7 +160,7 @@ Steps to Reproduce:
 
 Environment:
 - OS: WSL2 Ubuntu 22.04
-- Claude Code: 1.2.3
+- CLI: Codex 0.1.x / Claude Code 1.x.x
 - Bash: 5.1.16
 
 Proof of Concept:
@@ -229,7 +229,7 @@ The following are considered in scope for security reports:
 The following are NOT considered security vulnerabilities:
 
 - **Features working as designed**: For example, ntfy topic name being "public" is a documented limitation, not a vulnerability
-- **Third-party services**: Issues in ntfy.sh, Claude Code CLI, or MCP servers themselves (report those upstream)
+- **Third-party services**: Issues in ntfy.sh, Codex CLI, Claude Code CLI, or MCP servers themselves (report those upstream)
 - **Local access**: An attacker with local shell access can already do anything
 - **Denial of Service via resource exhaustion**: For example, spawning 1000 agents to consume memory
 - **Social engineering**: Tricking users into running malicious commands
@@ -243,12 +243,11 @@ To keep your multi-agent-shogun installation secure:
 
 1. **Keep dependencies updated**:
    ```bash
-   # Update Claude Code CLI
-   curl -fsSL https://claude.ai/install.sh | bash
+   # Update Codex CLI
+   npm install -g @openai/codex
 
-   # Update MCP servers
-   claude mcp list
-   # Re-run install commands for outdated servers
+   # Update MCP servers (Codex)
+   codex --help  # Check MCP configuration in AGENTS.md
    ```
 
 2. **Use strong ntfy topics**:

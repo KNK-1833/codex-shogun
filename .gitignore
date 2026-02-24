@@ -23,7 +23,7 @@
 !CONTRIBUTING.md
 !SECURITY.md
 
-# Claude Code settings (spinner verbs only, no secrets)
+# CLI settings (spinner verbs only, no secrets)
 !.claude/
 !.claude/settings.json
 
@@ -36,10 +36,7 @@
 
 # Multi-CLI: CLI-specific tool descriptions
 !instructions/cli_specific/
-!instructions/cli_specific/claude_tools.md
 !instructions/cli_specific/codex_tools.md
-!instructions/cli_specific/copilot_tools.md
-!instructions/cli_specific/kimi_tools.md
 
 # Multi-CLI: Build template parts (roles, common sections)
 !instructions/roles/

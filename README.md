@@ -463,7 +463,7 @@ The Karo breaks the task into subtasks:
 | Ashigaru 1 | Research Notion MCP |
 | Ashigaru 2 | Research GitHub MCP |
 | Ashigaru 3 | Research Playwright MCP |
-| Ashigaru 4 | Research Memory MCP |
+| Ashigaru 4 | Research Filesystem MCP |
 | Ashigaru 5 | Research Sequential Thinking MCP |
 
 All 5 Ashigaru research simultaneously. You can watch them work in real time:
@@ -1172,11 +1172,11 @@ You: "Research the top 5 AI coding assistants and compare them"
 What happens:
 1. Shogun delegates to Karo
 2. Karo assigns:
-   - Ashigaru 1: Research GitHub Copilot
+   - Ashigaru 1: Research OpenAI Codex
    - Ashigaru 2: Research Cursor
    - Ashigaru 3: Research Claude Code
    - Ashigaru 4: Research Codeium
-   - Ashigaru 5: Research Amazon CodeWhisperer
+   - Ashigaru 5: Research Amazon Q Developer
 3. All 5 research simultaneously
 4. Results compiled in dashboard.md
 ```

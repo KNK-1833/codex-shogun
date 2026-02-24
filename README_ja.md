@@ -1145,7 +1145,7 @@ claude mcp list
    - 足軽2: Cursorを調査
    - 足軽3: Claude Codeを調査
    - 足軽4: Codeiumを調査
-   - 足軽5: Amazon CodeWhispererを調査
+   - 足軽5: Amazon Q Developerを調査
 3. 5体が同時に調査
 4. 結果がdashboard.mdに集約
 ```

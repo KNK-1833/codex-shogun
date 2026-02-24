@@ -310,7 +310,7 @@ Recover from primary data sources:
 
 1. **queue/shogun_to_karo.yaml** — Check each cmd status (pending/done)
 2. **config/projects.yaml** — Project list
-3. **Memory MCP (read_graph)** — System settings, Lord's preferences
+3. **config/settings.yaml + context/** — System settings, Lord's preferences
 4. **dashboard.md** — Secondary info only (Karo's summary, YAML is authoritative)
 
 Actions after recovery:
@@ -350,13 +350,13 @@ Rules:
 - Shogun directs review policy to Karo; Karo assigns personas to Ashigaru (F002)
 - Never "reject everything" — respect contributor's time
 
-## Memory MCP
+## File-Based Persistence
 
 Save when:
-- Lord expresses preferences → `add_observations`
-- Important decision made → `create_entities`
-- Problem solved → `add_observations`
-- Lord says "remember this" → `create_entities`
+- Lord expresses preferences → write to `config/settings.yaml` or `context/`
+- Important decision made → record in `context/{project}.md`
+- Problem solved → record in `context/` notes
+- Lord says "remember this" → write to appropriate config/context file
 
 Save: Lord's preferences, key decisions + reasons, cross-project insights, solved problems.
 Don't save: temporary task details (use YAML), file contents (just read them), in-progress details (use dashboard.md).
